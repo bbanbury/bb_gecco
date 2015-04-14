@@ -295,6 +295,8 @@ CreateDosageDataFromGigs <- function(gigs_positions, directory="/GECCO_DATA_POOL
   nochromos <- unique(gigs_positions[,4])
   ddall <- data.frame(matrix(nrow=0, ncol=length(unique(gigs_positions[,3]))+3))
   colnames(ddall) <- c("study", "batch", "netcdf_ID", unique(gigs_positions[,3]))
+  probs <- NULL
+  probsnamevector <- NULL
   for(i in nochromos){
     sub_gigs_positions <- gigs_positions[which(gigs_positions[,4] == i),]  
     if(class(sub_gigs_positions) == "character"){
@@ -302,47 +304,23 @@ CreateDosageDataFromGigs <- function(gigs_positions, directory="/GECCO_DATA_POOL
     }
     nc <- nc_open(paste0(MakePathtoPeters_U(directory), i))
     samples <- ncvar_get(nc, "Sample_ID", start=c(1, 1), count=c(-1,-1))
-    study <- rep(GetStudy(whichFile), length(samples))
-    batch <- rep(GetBatch(whichFile), length(samples))
+    study <- rep(GetStudy(i), length(samples))
+    batch <- rep(GetBatch(i), length(samples))
     ind <- 0
-    for(i in sub_gigs_positions[,5]){
+    for(snpi in sub_gigs_positions[,5]){
       ind <- ind + 1
       lo <- as.numeric(sub_gigs_positions[,5][ind])
       if(ncvar_get(nc, "SNP_Name", start=c(1, lo), count=c(-1,1)) == sub_gigs_positions[ind,3]){  #here to check that rs number matches correctly
-        dosage <- ncvar_get(nc, "Dosage", start=c(lo, 1), count=c(1,-1))
+        #dosage <- ncvar_get(nc, "Dosage", start=c(lo, 1), count=c(1,-1))
+        dosage <- 2*ncvar_get(nc, "Prob_AA", start=c(lo,1), count=c(1, -1)) + ncvar_get(nc, "Prob_AB", start=c(lo,1), count=c(1,-1))
         probs <- cbind(probs, dosage)
-        probsnamevector <- c(probsnamevector, paste0(sub_gigs_positions[ind,3]))
+        probsnamevector <- c(probsnamevector, paste0(sub_gigs_positions[ind,2], "_", sub_gigs_positions[ind,3]))
       }
-
-
+      res <- cbind(study, batch, samples, probs)
+      colnames(res) <- c("study", "batch", "netcdf_ID", probsnamevector)
     }
-#    snpnames <- ncvar_get(nc, "SNP_Name", start=c(1, 1), count=c(-1,-1))
-#    tocollect <- which(snpnames %in% position)
-#    study <- ncvar_get(nc, "Study")[tocollect]
-#    study <- ncvar_get(nc, "Position", start=c(tocollect), count=c(length(tocollect)))
-#    pos <- ncvar_get(nc, "Position")[tocollect]
-
-
-
-
-    for(i in sub_gigs_posiitons[,5]){
-      ind <- ind + 1
-      lo <- as.numeric(sub_rs_positions[,5][ind])
-      if(ncvar_get(nc, "SNP_Name", start=c(1, lo), count=c(-1,1)) == sub_rs_positions[ind,3]){  #here to check that rs number matches correctly
-        dosage <- ncvar_get(nc, "Dosage", start=c(lo, 1), count=c(1,-1))
-        #  probAA <- ncvar_get(nc, "Prob_AA", start=c(lo, 1), count=c(1,-1))
-        #  probAB <- ncvar_get(nc, "Prob_AB", start=c(lo, 1), count=c(1,-1))
-        probs <- cbind(probs, dosage)
-        probsnamevector <- c(probsnamevector, paste0(sub_rs_positions[ind,3]))
-      }
-    res <- cbind(study, batch, samples, probs)
-    colnames(res) <- c("study", "batch", "netcdf_ID", probsnamevector)
-    }
-
-
-
-
   }
+  return(res)
 }
 
 
