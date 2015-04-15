@@ -65,6 +65,15 @@ print.snps_in_gene_regions <- function(x, ...){
 }
 
 
+print.snp_location_info <- function(x, ...){
+  writeLines(paste("This is a matrix of", dim(x)[1], "snps", "and all their locality information"))
+  writeLines(paste("Includes data from:"))
+  writeLines(paste0("     -- ", length(unique(x[,1])), " data source {", paste(unique(x[,1]), collapse=", "), "}"))
+  writeLines(paste0("     -- ", "from {", paste(unique(x[,2]), collapse=", "), "}"))
+  writeLines(paste0("     -- ", length(unique(x[,4])), " chromosomes {", paste(unique(x[,4]), collapse=", "), "}"))
+}
+
+
 Use_snp_finder.py <- function(gene, upstream=0, downstream=0, snp_list="gigs", buildver="hg19", report.call=FALSE, chatty=TRUE){
 #this passes a gene to Chucks snp_finder py script
 # snp_list can be gigs, exome_pooled_20130624, hapmap_imputed_20120208, or combined_exome_1kgp
@@ -96,13 +105,15 @@ Use_snp_finder.py <- function(gene, upstream=0, downstream=0, snp_list="gigs", b
 
 
 GetChromo <- function(ncdfFileName){
-  return(as.numeric(strsplit(ncdfFileName, "[_.]")[[1]][length(strsplit(ncdfFileName, "[_.]")[[1]]) - 1]))
+  return(strsplit(ncdfFileName, "[_.]")[[1]][length(strsplit(ncdfFileName, "[_.]")[[1]]) - 1])
 }
 # GetChromo("101ccfr_usc2_merged_dosage_5.nc")
+
 
 GetStudy <- function(ncdfFileName){
   return(strsplit(ncdfFileName, "[_.]")[[1]][1])
 }
+
 
 GetBatch <- function(ncdfFileName){
   return(strsplit(ncdfFileName, "[_.]")[[1]][2])
@@ -160,7 +171,8 @@ FindSNPposition_hapmap <- function(snp_name, directory, studies=NULL, chatty=TRU
       }
     }
   }
-  (return(res))
+  class(res) <- "snp_location_info"
+  return(res)
 }
 #RSAcross <- FindSNPposition_hapmap(rs, studies)
 #FindSNPposition_hapmap(c("rs11412"), studies, MakePathtoPeters_U(names.root))
@@ -368,6 +380,7 @@ FindSNPpositions_gigs <- function(snp_name, directory="/GECCO_DATA_POOLED/GIGS_V
   res <- res[match(snps, res[,3]),]  #return in original order
   if(class(snp_name) == "snps_in_gene_regions")
     res[,2] <- snp_name[,2]
+  class(res) <- "snp_location_info"
   return(res)
 }
 # gigs_positions <- FindSNPpositions_gigs(snp_name)
@@ -406,9 +419,24 @@ CreateDosageDataFromGigs <- function(gigs_positions, directory="/GECCO_DATA_POOL
 }
 
 
-MakeSNPDetailsTable_GIGS <- function(snps){
-  
-
+MakeSNPDetailsTable_GIGS <- function(snps, chatty=TRUE){
+  if(class(snps) != "snp_location_info")
+    snps <- FindSNPpositions_gigs(snps)
+  snps <- cbind(snps, sapply(snps[,4], GetChromo, USE.NAMES=FALSE))
+  res <- matrix(nrow=0, ncol=7)
+  files <- MakePathtoPeters_U("/GECCO_DATA_POOLED/GIGS_V2/snp_files/*.csv")
+  files <- system(paste("ls ", files), intern=TRUE)
+  filesnames <- sapply(files, GetChromo, USE.NAMES=FALSE)
+  files <- files[which(filesnames %in% unique(snps[,6]))]
+  for(i in files){
+    if(chatty)
+      print(paste("working on", i))
+    chr <- GetChromo(i)
+    sub_snps <- snps[which(snps[,6] == chr),]
+    tmp <- read.csv(i)
+    res <- rbind(res, tmp[which(tmp[,1] %in% sub_snps[,3]),])
+  }
+  return(res)
 }
 
 
@@ -624,7 +652,7 @@ MakeEpiDetailsTable <- function(variables) {
 
 
 
-## New function to merge survival/epi data with GWAS data
+## New function to merge survival/epi data with GWAS data?
 
 
 
@@ -639,7 +667,7 @@ MakeEpiDetailsTable <- function(variables) {
 
 ##  ---------------------------------  ##
 ##                                     ##
-##     RS Number Search Functions      ##
+##      new datasets for parsing       ##
 ##                                     ##
 ##  ---------------------------------  ##
 
