@@ -1,6 +1,8 @@
 ##  ---------------------------------  ##
 ##                                     ##
-##       HapMap Search Functions       ##
+##        Data Search Functions        ##
+##             (c) BBanbury            ##
+##             15 April 15             ##
 ##                                     ##
 ##  ---------------------------------  ##
 
@@ -8,32 +10,18 @@
 require(ncdf)
 require(ncdf4)
 
-# Make SNP names list with all RS numbers for each study
-#setwd(paste0(barb.working, "/HapMap_data/snp_names"))
-#for(i in list.files(hapmap.data)){
-#  # i <- list.files(hapmap.data)[15]
-#  datatypes <- list.files(paste(hapmap.data, i, sep="/"))
-#  for(typ in datatypes){
-#    dosages <- list.files(paste(hapmap.data, i, typ, "mach", sep="/"))
-#    snp_names <- list()
-#    for(dos in dosages){
-#      print(dos)
-#      nc <- open.ncdf(paste(hapmap.data, i, typ, "mach", dos, sep="/"))
-#      snp_names[[dos]] <- get.var.ncdf(nc, "SNP_Name", start=c(1,1), count=c(-1,-1))
-#      save(snp_names, file=paste0("snp_names_", typ, ".Rdata"))  #save iteratively
-#    }
-#    class(snp_names) <- "snp_names"
-#    save(snp_names, file=paste0("snp_names_", typ, ".Rdata"))  #save final with new class
-#  }
-#}
-
-# Make SNP names list with all RS numbers for GIGSV2
-#setwd(MakePathtoPeters_U(names.root))
-# don't need this because gigsv2/snp_files has csv files with rs numbers
 
 
-# study names change
+
+##  ---------------------------------  ##
+##                                     ##
+##         Assistant Functions         ##
+##                                     ##
+##  ---------------------------------  ##
+
+
 ChangeStudyNames <- function(study){
+# study names changes from paper proposals to datasets
   if(study == "ASTERISK") return("111fccs")
   else if(study == "OFCCR") return("102arctic")
   else if(study == "PMH-CCFR") return("117hrtccr")
@@ -41,6 +29,7 @@ ChangeStudyNames <- function(study){
 }
 # ChangeStudyNames("OFCCR")
 # sapply(studies, ChangeStudyNames)
+
 
 MakePathtoPeters_U <- function(directory, server="home"){
 # make path no matter if on local or rhino
@@ -66,7 +55,66 @@ print.snp_names <- function(x, ...){
     writeLines(paste("     ", names(x)[i], length(x[[i]])))
   }
 }
-#snp_names_file
+
+
+print.snps_in_gene_regions <- function(x, ...){
+  writeLines(paste("This is a matrix of snps in", length(unique(x[,2])), "gene regions."))
+  for(g in unique(x[,2])){
+    writeLines(paste("     -- ", g, "contains", length(which(x[,2] == g))))
+  }
+}
+
+
+Use_snp_finder.py <- function(gene, upstream=0, downstream=0, snp_list="gigs", buildver="hg19", report.call=FALSE, chatty=TRUE){
+#this passes a gene to Chucks snp_finder py script
+# snp_list can be gigs, exome_pooled_20130624, hapmap_imputed_20120208, or combined_exome_1kgp
+#buildver can be hg18 or hg19 (use hg18 for hapmap imputed)
+#This won't work local until I add something to my machine to deal with databases
+  allsnps <- NULL
+  for(g in gene){
+    if(chatty)
+      print(paste("working on", g))
+    path <- MakePathtoPeters_U("/PetersGrp/GECCO_Software/")
+    com <- paste0(path, "bin/snp_finder.py --db ", path, "snp.db --gene ", g, " -u ", upstream, " -d ", downstream, " -b ", buildver, " --snp_list ", snp_list)
+    if(report.call)
+      print(com)
+    snps <- system(com, intern=TRUE)
+    snps <- snps[grep("^chr", snps)]
+    if(length(snps) > 0){
+      snps <- sapply(snps, strsplit, USE.NAMES=FALSE, split="\\t")
+      snps <- matrix(unlist(sapply(snps, strsplit, USE.NAMES=FALSE, split="\\t")), ncol=2, byrow=TRUE)
+      allsnps <- rbind(allsnps, snps)
+    }
+    else
+      warning(paste(g, "not found in database"))
+  }
+  allsnps[,1] <- sapply(allsnps[,1], sub, pattern="chr", replacement="", USE.NAMES=FALSE)
+  colnames(allsnps) <- c("position", "gene")
+  class(allsnps) <- "snps_in_gene_regions"
+  return(allsnps)
+}
+
+
+GetChromo <- function(ncdfFileName){
+  return(as.numeric(strsplit(ncdfFileName, "[_.]")[[1]][length(strsplit(ncdfFileName, "[_.]")[[1]]) - 1]))
+}
+# GetChromo("101ccfr_usc2_merged_dosage_5.nc")
+
+GetStudy <- function(ncdfFileName){
+  return(strsplit(ncdfFileName, "[_.]")[[1]][1])
+}
+
+GetBatch <- function(ncdfFileName){
+  return(strsplit(ncdfFileName, "[_.]")[[1]][2])
+}
+
+
+
+##  ---------------------------------  ##
+##                                     ##
+##           Hapmap Functions          ##
+##                                     ##
+##  ---------------------------------  ##
 
 
 find_rs_hapmap <- function(rs_number, snp_names){
@@ -92,55 +140,6 @@ find_rs_hapmap <- function(rs_number, snp_names){
 }
 # find_rs_hapmap(c("rs2286139", "rs11127519"), snp_names)  #works with knowns
 
-print.snps_in_gene_regions <- function(x, ...){
-  writeLines(paste("This is a matrix of snps in", length(unique(x[,2])), "gene regions."))
-  for(g in unique(x[,2])){
-    writeLines(paste("     -- ", g, "contains", length(which(x[,2] == g))))
-  }
-}
-
-
-Use_snp_finder.py <- function(gene, upstream=0, downstream=0, snp_list="gigs", buildver="hg19"){
-#this passes a gene to Chucks snp_finder py script
-# snp_list can be gigs, exome_pooled_20130624, hapmap_imputed_20120208, or combined_exome_1kgp
-#buildver can be hg18 or hg19 (use hg18 for hapmap imputed)
-#This won't work local until I add something to my machine to deal with databases
-  allsnps <- NULL
-  for(g in gene){
-    path <- MakePathtoPeters_U("/PetersGrp/GECCO_Software/")
-    com <- paste0(path, "bin/snp_finder.py --db ", path, "snp.db --gene ", g, " -u ", upstream, " -d ", downstream, " -b ", buildver, " --snp_list ", snp_list)
-    snps <- system(com, intern=TRUE)
-    snps <- snps[grep("^chr", snps)]
-    if(length(snps) > 0){
-      snps <- sapply(snps, strsplit, USE.NAMES=FALSE, split="\\t")
-      snps <- matrix(unlist(sapply(snps, strsplit, USE.NAMES=FALSE, split="\\t")), ncol=2, byrow=TRUE)
-      allsnps <- rbind(allsnps, snps)
-    }
-    else
-      warning(paste(g, "not found in database"))
-  }
-  allsnps[,1] <- sapply(allsnps[,1], sub, pattern="chr", replacement="", USE.NAMES=FALSE)
-  colnames(allsnps) <- c("position", "gene")
-  class(allsnps) <- "snps_in_gene_regions"
-  return(allsnps)
-}
-
-
-find_rs_to_gigs <- function(rs_number, chatty=TRUE){
-# use rs_to_gigs_positions to match known rs numbers with positions in gigs
-  rs_to_gigs_file <- MakePathtoPeters_U("/GECCO_Working/barb_working/rs_names_to_gigs_positions.csv")
-  res <- NULL
-  for(i in rs_number){
-    if(chatty)
-      print(paste("Working on", i))
-    tmp <- system(paste("grep", i, rs_to_gigs_file), intern=TRUE)
-    # no strsplit at the comma and make a new table that returns rs and positions
-   ##########  More here  ############
-  }
-
-}
-
-
 
 FindSNPposition_hapmap <- function(snp_name, directory, studies=NULL, chatty=TRUE){
 # for a vector of rs_numbers 
@@ -165,6 +164,165 @@ FindSNPposition_hapmap <- function(snp_name, directory, studies=NULL, chatty=TRU
 }
 #RSAcross <- FindSNPposition_hapmap(rs, studies)
 #FindSNPposition_hapmap(c("rs11412"), studies, MakePathtoPeters_U(names.root))
+
+
+CreateDosageDataPerStudy <- function(rs_positions, directory=NULL){
+#rs_positions should be like RSAcross (output from FindSNPpositions* functions)
+# make this its own class too and print statement
+  files <- unique(rs_positions[,4])
+  probs <- NULL
+  probsnamevector <- NULL
+  for(whichFile in files){
+    nc <- nc_open(paste0(directory, whichFile))
+    samples <- ncvar_get(nc, "Sample_ID", start=c(1, 1), count=c(-1,-1))
+    study <- rep(GetStudy(whichFile), length(samples))
+    batch <- rep(GetBatch(whichFile), length(samples))
+    sub_rs_positions <- rs_positions[which(rs_positions[,4] == whichFile),]  
+    if(class(sub_rs_positions) == "character"){
+      sub_rs_positions <- matrix(sub_rs_positions, nrow=1)
+    }
+    ind <- 0
+    for(i in sub_rs_positions[,5]){
+      ind <- ind + 1
+      lo <- as.numeric(sub_rs_positions[,5][ind])
+      if(ncvar_get(nc, "SNP_Name", start=c(1, lo), count=c(-1,1)) == sub_rs_positions[ind,3]){  #here to check that rs number matches correctly
+        dosage <- ncvar_get(nc, "Dosage", start=c(lo, 1), count=c(1,-1))
+        #  probAA <- ncvar_get(nc, "Prob_AA", start=c(lo, 1), count=c(1,-1))
+        #  probAB <- ncvar_get(nc, "Prob_AB", start=c(lo, 1), count=c(1,-1))
+        probs <- cbind(probs, dosage)
+        probsnamevector <- c(probsnamevector, paste0(sub_rs_positions[ind,3]))
+      }
+    res <- cbind(study, batch, samples, probs)
+    colnames(res) <- c("study", "batch", "netcdf_ID", probsnamevector)
+    }
+  }
+  return(res)
+}
+# CreateDosageDataPerStudy(rs_positions)
+
+
+CreateDosageDataAcrossStudies <- function(rs_positions, hapmap.data.dir=hapmap.data, saveToRdata=NULL){
+  # for a vector of c(rs_numbers)
+  # for a vector of c(studies)
+  #if saveToData is a filename then it will save to working dir
+  nostudies <- unique(paste(rs_positions[,1], rs_positions[,2], sep="_"))
+  ddall <- data.frame(matrix(nrow=0, ncol=length(unique(rs_positions[,3]))+3))
+  colnames(ddall) <- c("study", "batch", "netcdf_ID", unique(rs_positions[,3]))
+  for(i in nostudies){
+    dir <- paste0(MakePathtoPeters_U(hapmap.data), GetStudy(i), "/", paste(GetStudy(i), GetBatch(i), sep="_"), "/mach/")
+    red_rs_positions <- rs_positions[grep(paste0(i, "_"), rs_positions[,4]),]
+    dd <- CreateDosageDataPerStudy(red_rs_positions, dir)
+    if(any(!colnames(ddall) %in% colnames(dd))){
+      colsToAdd <- which(!colnames(ddall) %in% colnames(dd))  #add NAs columns
+      NAcols <- data.frame(matrix(nrow=dim(dd), ncol=length(colsToAdd)))
+      colnames(NAcols) <- colnames(ddall[colsToAdd])
+      dd <- cbind(dd, NAcols)
+    }
+    ddall <- rbind(ddall, dd)   ## NEED to join columns, because they are different
+  }
+  #if(!is.null(saveToRdata)){
+  #  
+  #}
+  return(ddall)
+}
+# CreateDosageDataAcrossStudies(rs_positions, hapmap.dir)
+
+
+GetCountAndBaselineAlleles <- function(rs_numbers, directory=NULL){
+# Get count alleles from legend file
+# will return a matrix with rs, position, and alleles in number format
+  res <- matrix(nrow=length(rs_numbers), ncol=4)
+  colnames(res) <- c("rs_number", "position", "Allele1", "Allele2")
+  res[,1] <- rs_numbers
+  p <- paste0(MakePathtoPeters_U(directory), "legend-augmented.nc")
+  nc <- nc_open(p)
+  nameVector <- ncvar_get(nc, "SNP_Name", start=c(1,1), count=c(-1,-1))
+  locations <- which(nameVector %in% rs_numbers)
+  res[,2] <- locations
+  for(i in sequence(dim(res)[1])){
+    res[i,3] <- ncvar_get(nc, "Allele1", start=c(locations[i]), count=c(1))
+    res[i,4] <- ncvar_get(nc, "Allele2", start=c(locations[i]), count=c(1))
+  }  
+  return(res)
+}
+
+
+CreateSNPDetailsTable <- function(rs_numbers, studies, directory){
+  # hapmap
+  # for a given list of snps, we want to create a table to be released with data
+  # should include: snp name, which chromosome it is on, the number of studies genotyped, the number of studies imputed, the count allele, the baseline allele, the mean R2, the R2Range, the mean CAF, and the CAF range
+  # be in barb_working/HapMap_data
+  # load(paste0(MakePathtoPeters_U(directory), "gecco_version3_SNPinfo_23studies.Rdata"))
+  dataNeeded <- c("snpsall", "Imputed.matrix", "R2.matrix", "CAF.matrix")
+  if(!all(dataNeeded %in% ls())){
+    whichNotLoaded <- which(!dataNeeded %in% ls())
+    for(i in sequence(length(whichNotLoaded))){
+      load(paste0(MakePathtoPeters_U(directory), dataNeeded[i], ".Rdata"))
+    }
+  }   
+  nc <- nc_open(paste0(MakePathtoPeters_U(directory), "legend-augmented.nc"))
+  dets <- matrix(nrow=length(rs_numbers), ncol=9)
+  rownames(dets) <- rs_numbers
+  colnames(dets) <- c("Chr", "NumStudGeno", "NumStudImpute", "Count", "Baseline", "MeanR2", "RangeR2", "MeanCAF", "RangeCAF")
+  FlorasPos <- which(snpsall[,1] %in% rs_numbers)
+  colsToInclude <- NULL
+  for(i in colnames(Imputed.matrix)){  #which studies to include
+    if(strsplit(i, ".", fixed=TRUE)[[1]][1] %in% studies)
+      colsToInclude[i] <- TRUE
+    else
+      colsToInclude[i] <- FALSE
+  }
+  FlorasData <- cbind(snpsall[FlorasPos,], Imputed.matrix[FlorasPos, colsToInclude], R2.matrix[FlorasPos, colsToInclude], CAF.matrix[FlorasPos, colsToInclude])
+  alleles <- GetCountAndBaselineAlleles(rs_numbers, directory)
+  for(i in sequence(dim(dets)[1])){
+    h <- which(FlorasData[,1] == rownames(dets)[i])
+    dets[i,1] <- FlorasData[h,3]  # chromo
+    dets[i,2] <- length(which(FlorasData[h, grep("Imputed", colnames(FlorasData))] == 0))  # genotyped
+    dets[i,3] <- length(which(FlorasData[h, grep("Imputed", colnames(FlorasData))] == 1))  # imputed
+    dets[i,4] <- alleles[which(alleles[,1] == rownames(dets)[i]), 3]
+    dets[i,5] <- alleles[which(alleles[,1] == rownames(dets)[i]), 4]
+    whichImputed <- which(FlorasData[h, grep("Imputed", colnames(FlorasData))] == 1)
+    if(length(whichImputed) > 0){
+      cols <- grep("R2", colnames(FlorasData))[whichImputed]
+      dets[i,6] <- round(mean(unlist(FlorasData[h, cols]), na.rm=TRUE), digits=3)  #mean R2 for imputed only
+      dets[i,7] <- paste(round(min(FlorasData[h, cols]), digits=3), round(max(FlorasData[h, cols]), digits=3), sep="-")
+    }
+    cols <- grep("RAF", colnames(FlorasData))
+    dets[i,8] <- round(mean(unlist(FlorasData[h, cols]), na.rm=TRUE), digits=3)
+    dets[i,9] <- paste(round(min(FlorasData[h, cols], na.rm=TRUE), digits=3), round(max(FlorasData[h, cols], na.rm=TRUE), digits=3), sep="-")
+  }
+  return(data.frame(dets))
+}
+# CreateSNPDetailsTable(rs, studies, directory="GECCO_Working/barb_working/HapMap_data/")
+
+
+
+
+##  ---------------------------------  ##
+##                                     ##
+##           GIGSv2 Functions          ##
+##                                     ##
+##  ---------------------------------  ##
+
+
+find_rs_to_gigs <- function(rs_number, chatty=TRUE){
+# use rs_to_gigs_positions to match known rs numbers with positions in gigs
+  rs_to_gigs_file <- MakePathtoPeters_U("/GECCO_Working/barb_working/rs_names_to_gigs_positions.csv")
+  res <- matrix(nrow=length(rs_number), ncol=2)
+  colnames(res) <- c("rs_number", "gigs_number")
+  for(i in sequence(length(rs_number))){
+    if(chatty)
+      print(paste("Working on", rs_number[i]))
+    tmp <- system(paste0("grep '", rs_number[i], ",' ", rs_to_gigs_file), intern=TRUE)
+    if(length(tmp) == 0)
+      res[i,] <- rep(NA, 2)
+    if(length(tmp) == 1)
+      res[i,] <- strsplit(tmp, split=",")[[1]]
+    if(length(tmp) > 1)
+      stop("something went wonky, grep returning multiple")  
+  }
+  return(res)
+}
 
 
 Find_position_gigs_single_chromo <- function(position, chromosome, directory){
@@ -215,82 +373,6 @@ FindSNPpositions_gigs <- function(snp_name, directory="/GECCO_DATA_POOLED/GIGS_V
 # gigs_positions <- FindSNPpositions_gigs(snp_name)
 
 
-
-CreateDosageDataPerStudy <- function(rs_positions, directory=NULL){
-#rs_positions should be like RSAcross (output from FindSNPpositions* functions)
-# make this its own class too and print statement
-  files <- unique(rs_positions[,4])
-  probs <- NULL
-  probsnamevector <- NULL
-  for(whichFile in files){
-    nc <- nc_open(paste0(directory, whichFile))
-    samples <- ncvar_get(nc, "Sample_ID", start=c(1, 1), count=c(-1,-1))
-    study <- rep(GetStudy(whichFile), length(samples))
-    batch <- rep(GetBatch(whichFile), length(samples))
-    sub_rs_positions <- rs_positions[which(rs_positions[,4] == whichFile),]  
-    if(class(sub_rs_positions) == "character"){
-      sub_rs_positions <- matrix(sub_rs_positions, nrow=1)
-    }
-    ind <- 0
-    for(i in sub_rs_positions[,5]){
-      ind <- ind + 1
-      lo <- as.numeric(sub_rs_positions[,5][ind])
-      if(ncvar_get(nc, "SNP_Name", start=c(1, lo), count=c(-1,1)) == sub_rs_positions[ind,3]){  #here to check that rs number matches correctly
-        dosage <- ncvar_get(nc, "Dosage", start=c(lo, 1), count=c(1,-1))
-        #  probAA <- ncvar_get(nc, "Prob_AA", start=c(lo, 1), count=c(1,-1))
-        #  probAB <- ncvar_get(nc, "Prob_AB", start=c(lo, 1), count=c(1,-1))
-        probs <- cbind(probs, dosage)
-        probsnamevector <- c(probsnamevector, paste0(sub_rs_positions[ind,3]))
-      }
-    res <- cbind(study, batch, samples, probs)
-    colnames(res) <- c("study", "batch", "netcdf_ID", probsnamevector)
-    }
-  }
-  return(res)
-}
-# CreateDosageDataPerStudy(rs_positions)
-
-
-GetChromo <- function(ncdfFileName){
-  return(as.numeric(strsplit(ncdfFileName, "[_.]")[[1]][length(strsplit(ncdfFileName, "[_.]")[[1]]) - 1]))
-}
-# GetChromo("101ccfr_usc2_merged_dosage_5.nc")
-
-GetStudy <- function(ncdfFileName){
-  return(strsplit(ncdfFileName, "[_.]")[[1]][1])
-}
-
-GetBatch <- function(ncdfFileName){
-  return(strsplit(ncdfFileName, "[_.]")[[1]][2])
-}
-
-
-CreateDosageDataAcrossStudies <- function(rs_positions, hapmap.data.dir=hapmap.data, saveToRdata=NULL){
-  # for a vector of c(rs_numbers)
-  # for a vector of c(studies)
-  #if saveToData is a filename then it will save to working dir
-  nostudies <- unique(paste(rs_positions[,1], rs_positions[,2], sep="_"))
-  ddall <- data.frame(matrix(nrow=0, ncol=length(unique(rs_positions[,3]))+3))
-  colnames(ddall) <- c("study", "batch", "netcdf_ID", unique(rs_positions[,3]))
-  for(i in nostudies){
-    dir <- paste0(MakePathtoPeters_U(hapmap.data), GetStudy(i), "/", paste(GetStudy(i), GetBatch(i), sep="_"), "/mach/")
-    red_rs_positions <- rs_positions[grep(paste0(i, "_"), rs_positions[,4]),]
-    dd <- CreateDosageDataPerStudy(red_rs_positions, dir)
-    if(any(!colnames(ddall) %in% colnames(dd))){
-      colsToAdd <- which(!colnames(ddall) %in% colnames(dd))  #add NAs columns
-      NAcols <- data.frame(matrix(nrow=dim(dd), ncol=length(colsToAdd)))
-      colnames(NAcols) <- colnames(ddall[colsToAdd])
-      dd <- cbind(dd, NAcols)
-    }
-    ddall <- rbind(ddall, dd)   ## NEED to join columns, because they are different
-  }
-  #if(!is.null(saveToRdata)){
-  #  
-  #}
-  return(ddall)
-}
-# CreateDosageDataAcrossStudies(rs_positions, hapmap.dir)
-
 CreateDosageDataFromGigs <- function(gigs_positions, directory="/GECCO_DATA_POOLED/GIGS_V2/", chatty=TRUE){
   nochromos <- unique(gigs_positions[,4])
   ddall <- data.frame(matrix(nrow=0, ncol=length(unique(gigs_positions[,3]))+3))
@@ -324,81 +406,10 @@ CreateDosageDataFromGigs <- function(gigs_positions, directory="/GECCO_DATA_POOL
 }
 
 
-GetCountAndBaselineAlleles <- function(rs_numbers, directory=NULL){
-# Get count alleles from legend file
-# will return a matrix with rs, position, and alleles in number format
-  res <- matrix(nrow=length(rs_numbers), ncol=4)
-  colnames(res) <- c("rs_number", "position", "Allele1", "Allele2")
-  res[,1] <- rs_numbers
-  p <- paste0(MakePathtoPeters_U(directory), "legend-augmented.nc")
-  nc <- nc_open(p)
-  nameVector <- ncvar_get(nc, "SNP_Name", start=c(1,1), count=c(-1,-1))
-  locations <- which(nameVector %in% rs_numbers)
-  res[,2] <- locations
-  for(i in sequence(dim(res)[1])){
-    res[i,3] <- ncvar_get(nc, "Allele1", start=c(locations[i]), count=c(1))
-    res[i,4] <- ncvar_get(nc, "Allele2", start=c(locations[i]), count=c(1))
-  }  
-  return(res)
+MakeSNPDetailsTable_GIGS <- function(snps){
+  
+
 }
-
-#MakeGenomeDetailsTable <- function(legendFile="legend-augmented.nc", FlorasRdata="gecco_version3_SNPinfo_23studies.Rdata"){
-# make sure you are in barb_working/HapMap.data
-# idea is to make one giant table that you can then scrape...not sure
-#  load(FlorasRdata)
-#}
-# MakeGenomeDetailsTable("GECCO_Working/GECCO_Data_Working/pca/legend-augmented.nc")
-
-
-
-CreateSNPDetailsTable <- function(rs_numbers, studies, directory){
-  # for a given list of snps, we want to create a table to be released with data
-  # should include: snp name, which chromosome it is on, the number of studies genotyped, the number of studies imputed, the count allele, the baseline allele, the mean R2, the R2Range, the mean CAF, and the CAF range
-  # be in barb_working/HapMap_data
-  # load(paste0(MakePathtoPeters_U(directory), "gecco_version3_SNPinfo_23studies.Rdata"))
-  dataNeeded <- c("snpsall", "Imputed.matrix", "R2.matrix", "CAF.matrix")
-  if(!all(dataNeeded %in% ls())){
-    whichNotLoaded <- which(!dataNeeded %in% ls())
-    for(i in sequence(length(whichNotLoaded))){
-      load(paste0(MakePathtoPeters_U(directory), dataNeeded[i], ".Rdata"))
-    }
-  }   
-  nc <- nc_open(paste0(MakePathtoPeters_U(directory), "legend-augmented.nc"))
-  dets <- matrix(nrow=length(rs_numbers), ncol=9)
-  rownames(dets) <- rs_numbers
-  colnames(dets) <- c("Chr", "NumStudGeno", "NumStudImpute", "Count", "Baseline", "MeanR2", "RangeR2", "MeanCAF", "RangeCAF")
-  FlorasPos <- which(snpsall[,1] %in% rs_numbers)
-  colsToInclude <- NULL
-  for(i in colnames(Imputed.matrix)){  #which studies to include
-    if(strsplit(i, ".", fixed=TRUE)[[1]][1] %in% studies)
-      colsToInclude[i] <- TRUE
-    else
-      colsToInclude[i] <- FALSE
-  }
-  FlorasData <- cbind(snpsall[FlorasPos,], Imputed.matrix[FlorasPos, colsToInclude], R2.matrix[FlorasPos, colsToInclude], CAF.matrix[FlorasPos, colsToInclude])
-  alleles <- GetCountAndBaselineAlleles(rs_numbers, directory)
-  for(i in sequence(dim(dets)[1])){
-    h <- which(FlorasData[,1] == rownames(dets)[i])
-    dets[i,1] <- FlorasData[h,3]  # chromo
-    dets[i,2] <- length(which(FlorasData[h, grep("Imputed", colnames(FlorasData))] == 0))  # genotyped
-    dets[i,3] <- length(which(FlorasData[h, grep("Imputed", colnames(FlorasData))] == 1))  # imputed
-    dets[i,4] <- alleles[which(alleles[,1] == rownames(dets)[i]), 3]
-    dets[i,5] <- alleles[which(alleles[,1] == rownames(dets)[i]), 4]
-    whichImputed <- which(FlorasData[h, grep("Imputed", colnames(FlorasData))] == 1)
-    if(length(whichImputed) > 0){
-      cols <- grep("R2", colnames(FlorasData))[whichImputed]
-      dets[i,6] <- round(mean(unlist(FlorasData[h, cols]), na.rm=TRUE), digits=3)  #mean R2 for imputed only
-      dets[i,7] <- paste(round(min(FlorasData[h, cols]), digits=3), round(max(FlorasData[h, cols]), digits=3), sep="-")
-    }
-    cols <- grep("RAF", colnames(FlorasData))
-    dets[i,8] <- round(mean(unlist(FlorasData[h, cols]), na.rm=TRUE), digits=3)
-    dets[i,9] <- paste(round(min(FlorasData[h, cols], na.rm=TRUE), digits=3), round(max(FlorasData[h, cols], na.rm=TRUE), digits=3), sep="-")
-  }
-  return(data.frame(dets))
-}
-# CreateSNPDetailsTable(rs, studies, directory="GECCO_Working/barb_working/HapMap_data/")
-
-
 
 
 
@@ -558,8 +569,10 @@ CreateEpiDataset <- function(variables, studies, chatty=TRUE){
   return(res)
 }
 
-CreateSurvivalDataset <- function(variables, studies){
+CreateSurvivalDataset <- function(variables, studies="all"){
 # make dataset with 
+  if(studies == "all")
+    studies <- c("101ccfr","109colo23", "112mec", "114phs", "115vital", "108dachs", "103dals", "111fccs", "110hpfs", "113nhs", "102arctic", "117hrtccr", "104plco", "105whi")
   survdir <- MakePathtoPeters_U("/GECCO_Working/mpassareworking/Survival/Combined\ Survival\ Update\ Has\ Surv\ Pooled.csv")
   tmp <- read.csv(survdir, stringsAsFactors=FALSE)
   variables <- variables[which(variables %in% colnames(tmp))]
@@ -630,6 +643,31 @@ MakeEpiDetailsTable <- function(variables) {
 ##                                     ##
 ##  ---------------------------------  ##
 
+# Make SNP names list with all RS numbers for each study
+#setwd(paste0(barb.working, "/HapMap_data/snp_names"))
+#for(i in list.files(hapmap.data)){
+#  # i <- list.files(hapmap.data)[15]
+#  datatypes <- list.files(paste(hapmap.data, i, sep="/"))
+#  for(typ in datatypes){
+#    dosages <- list.files(paste(hapmap.data, i, typ, "mach", sep="/"))
+#    snp_names <- list()
+#    for(dos in dosages){
+#      print(dos)
+#      nc <- open.ncdf(paste(hapmap.data, i, typ, "mach", dos, sep="/"))
+#      snp_names[[dos]] <- get.var.ncdf(nc, "SNP_Name", start=c(1,1), count=c(-1,-1))
+#      save(snp_names, file=paste0("snp_names_", typ, ".Rdata"))  #save iteratively
+#    }
+#    class(snp_names) <- "snp_names"
+#    save(snp_names, file=paste0("snp_names_", typ, ".Rdata"))  #save final with new class
+#  }
+#}
+
+# Make SNP names list with all RS numbers for GIGSV2
+#setwd(MakePathtoPeters_U(names.root))
+# don't need this because gigsv2/snp_files has csv files with rs numbers
+
+
+
 # To find rs numbers in GIGS, you need to know their respective locations
 # These were done for GIGSv1, but not for GIGSv2
 # Keith made the original Rdata files and I pulled them into R (took forever) and then created a two column csv that could then be grepped in system rather than having to load it all in R
@@ -663,18 +701,23 @@ MakeEpiDetailsTable <- function(variables) {
 Yi_GetEpiDataFromGigs <- function(env){
 # can not include variables which are in the sameple file (they get added anyway)
   load(MakePathtoPeters_U("/GECCO_DATA_POOLED/GIGS_V1/sample_files/gigs_sample.Rdata"))
-  library(ncdf4)
-  Gpath = MakePathtoPeters_U('/GECCO_DATA_POOLED/GIGS_V2/')
+  if(any(env %in% colnames(gigs_sample)))
+    env <- env[-which(env %in% colnames(gigs_sample))]
+  if(any(c("censor", "crcdeath", "time_surv", "outc") %in% env)){
+    env <- env[-which(env %in% c("censor", "crcdeath", "time_surv", "outc"))]
+    warning("env includes survival, which will have to be done separately and merged")
+  }
+  Gpath <- MakePathtoPeters_U('/GECCO_DATA_POOLED/GIGS_V2/')
   nc <- nc_open(paste(Gpath, 'gigs_v2_chr22.nc', sep=''))
   SampleID <- ncvar_get( nc, 'Sample_ID')
-  Study<-ncvar_get( nc, 'Study')
-  gigs2 = data.frame(SampleID,Study,stringsAsFactors=F)
+  Study <- ncvar_get( nc, 'Study')
+  gigs2 <- data.frame(SampleID,Study,stringsAsFactors=F)
   
-  gigs2 = merge(gigs_sample,gigs2,by.x='netcdfid',by.y='SampleID')
+  gigs2 <- merge(gigs_sample,gigs2,by.x='netcdfid',by.y='SampleID')
 
-  Epath = MakePathtoPeters_U('/Data Harmonization/Post-harmonization/Data/', "cs")
+  Epath <- MakePathtoPeters_U('/Data Harmonization/Post-harmonization/Data/', "cs")
 
-  sample0 =  data.frame(study = c(101:104,105,108:115,117),
+  sample0 <- data.frame(study = c(101:104,105,108:115,117),
 		      lab = c('101ccfr0',"102arctic0",'103dals0','104plco0','105whi0',
 			      '108dachs0',"109colo230",'110hpfs0','111fccs0',"112mec0",
 			      '113nhs0',"114phs0",'115vital0','117hrtccr0'),stringsAsFactors=F)
@@ -684,45 +727,45 @@ Yi_GetEpiDataFromGigs <- function(env){
   # env = c('famhx1','famhx_reln1','ibd','study_site','sex','asp_ref','aspirin','cancer_site_sum1',
   #        'cancer_site_sum2','age_dx','BMI5','age_dxsel','stage','stage2','stage3')
         
-  tab.sum = data.frame(study=unique(gigs_sample$study),wgs=NA,epi=NA)
+  tab.sum <- data.frame(study=unique(gigs_sample$study),wgs=NA,epi=NA)
   rownames(tab.sum) = unique(gigs_sample$study)
   for(i in unique(gigs2$study)){
     print(i)
-    dat = read.csv(paste0(Epath,sample0[sample0$study==i,'lab'],'.csv'),stringsAsFactors=F)
-    dat = dat[,c('compassid','outc',env)]
-    std = sample0[sample0$study==i,'lab']
+    dat <- read.csv(paste0(Epath,sample0[sample0$study==i,'lab'],'.csv'),stringsAsFactors=F)
+    dat <- dat[,c('compassid','outc',env)]
+    std <- sample0[sample0$study==i,'lab']
     if(i %in% 105){ # WHI samples from exomechip 
-      dat.e = read.csv(paste0(Epath,substr(std,1,nchar(std)-1),'_e.csv'))
-      dat = rbind(dat,dat.e[!dat.e$compassid %in% dat$compassid,c('compassid','outc',env)])
+      dat.e <- read.csv(paste0(Epath,substr(std,1,nchar(std)-1),'_e.csv'))
+      dat <- rbind(dat,dat.e[!dat.e$compassid %in% dat$compassid,c('compassid','outc',env)])
     }
     if(i %in% 101){ #CCFR samples from CCFR and CCFR 2 
-      dat.1 = read.csv(paste0(Epath,substr(std,1,nchar(std)-1),'.csv'))
-      dat.2 = read.csv(paste0(Epath,substr(std,1,nchar(std)-1),'2.csv'))
-      dat = rbind(dat,dat.1[dat.1$compassid %in% setdiff(dat.1$compassid,dat$compassid),c('compassid','outc',env)])
-      dat = rbind(dat,dat.2[dat.2$compassid %in% setdiff(dat.2$compassid,dat$compassid),c('compassid','outc',env)])
+      dat.1 <- read.csv(paste0(Epath,substr(std,1,nchar(std)-1),'.csv'))
+      dat.2 <- read.csv(paste0(Epath,substr(std,1,nchar(std)-1),'2.csv'))
+      dat <- rbind(dat,dat.1[dat.1$compassid %in% setdiff(dat.1$compassid,dat$compassid),c('compassid','outc',env)])
+      dat <- rbind(dat,dat.2[dat.2$compassid %in% setdiff(dat.2$compassid,dat$compassid),c('compassid','outc',env)])
     }
-    wgs = gigs2[gigs2$study==i,]
-    epi = merge(wgs,dat,by='compassid',all.x=T)
-    tab.sum[as.character(i),-1] = c(nrow(wgs),length(intersect(wgs$compassid,dat$compassid)))
-    epidata = rbind(epidata,epi)
+    wgs <- gigs2[gigs2$study == i,]
+    epi <- merge(wgs,dat,by='compassid',all.x=T)
+    tab.sum[as.character(i),-1] <- c(nrow(wgs),length(intersect(wgs$compassid,dat$compassid)))
+    epidata <- rbind(epidata,epi)
   }  
 
   #= update outcome for WHI samples selected from whole seq 
-  change.whi = read.csv(paste0(Epath,'105whi_seq.csv'),stringsAsFactors=F)
-  tmp = epidata[!((epidata$case %in% 0 & epidata$outc %in% 'Control') | (epidata$case %in% 1 & epidata$outc %in% 'Case')),]
-  changed = as.character(tmp[tmp$drop==0,'compassid'])
-  epidata[epidata$compassid %in% changed,c('compassid','outc',env)]=change.whi[change.whi$compassid %in% changed,c('compassid','outc',env)]  #== change genotypingphase for ccfr2
-  epidata$genotypingphase = as.character(epidata$genotypingphase)
-  epidata$genotypingphase[epidata$genotypingphase %in% 'CCFR 1 1/2'] = 'CCFR 1'
-  epidata$genotypingphase[epidata$genotypingphase %in% 'CCFR 1' & epidata$Study %in% c('101ccfr_usc21','101ccfr_usc22')] = 'CCFR 2'
+  change.whi <- read.csv(paste0(Epath,'105whi_seq.csv'),stringsAsFactors=F)
+  tmp <- epidata[!((epidata$case %in% 0 & epidata$outc %in% 'Control') | (epidata$case %in% 1 & epidata$outc %in% 'Case')),]
+  changed <- as.character(tmp[tmp$drop==0,'compassid'])
+  epidata[epidata$compassid %in% changed,c('compassid','outc',env)] <- change.whi[change.whi$compassid %in% changed,c('compassid','outc',env)]  #== change genotypingphase for ccfr2
+  epidata$genotypingphase <- as.character(epidata$genotypingphase)
+  epidata$genotypingphase[epidata$genotypingphase %in% 'CCFR 1 1/2'] <- 'CCFR 1'
+  epidata$genotypingphase[epidata$genotypingphase %in% 'CCFR 1' & epidata$Study %in% c('101ccfr_usc21','101ccfr_usc22')] <- 'CCFR 2'
 
   #== change PCs to gigs2 PC
-  epidata = epidata[,!colnames(epidata) %in% c('pc1','pc2','pc3','Study')]
+  epidata <- epidata[,!colnames(epidata) %in% c('pc1','pc2','pc3','Study')]
   load(MakePathtoPeters_U('GECCO_Working/keithworking/t275-work/pca.Rdata'))
-  pcs = data.frame(Sample_ID,PC[,1:3],stringsAsFactors=F)
-  colnames(pcs) = c('netcdfid','pc1','pc2','pc3')
-  epidata = merge(epidata,pcs,by='netcdfid')
-  epidata$drop=0
+  pcs <- data.frame(Sample_ID,PC[,1:3],stringsAsFactors=F)
+  colnames(pcs) <- c('netcdfid','pc1','pc2','pc3')
+  epidata <- merge(epidata,pcs,by='netcdfid')
+  epidata$drop <- 0
   
   return(epidata)
   #save(epidata,file=paste0(Epath,'GIGS2_EpiData.Rdata'))
