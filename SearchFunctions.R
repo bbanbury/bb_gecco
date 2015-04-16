@@ -582,11 +582,15 @@ CreateEpiDatasetPerStudy <- function(variables, study, files="1or2", chatty=TRUE
     variables[-which(variables %in% c("censor", "crcdeath", "time_surv"))]
   epi1 <- MakePathtoPeters_U("/Data\\ Harmonization/Post-harmonization/Data/", server="cs")
   epifiles <- WhichEpiFilesToInclude(system(paste0("ls ", epi1, "*.csv"), intern=TRUE), study, files=files)
-  m <- matrix(nrow=0, ncol=length(variables)+3)
-  colnames(m) <- c("compassID", "netcdfID", "study", variables)
+  m <- matrix(nrow=0, ncol=length(variables)+4)
+  ind <- 0
   for(j in epifiles$files){
+    ind <- ind+1
+    Study <- sub(".csv", "", epifiles$sst[ind])
     tmp <- read.csv(j)
-    tmp <- tmp[,which(colnames(tmp) %in% c("compassid", "netcdfid", "gecco_study", variables))]
+    tmp <- cbind(Study, tmp[,which(colnames(tmp) %in% c("compassid", "netcdfid", "gecco_study", variables))])
+    if(chatty)
+      print(paste("working on", Study, "; dim =", paste(dim(tmp), collapse="_")))
     m <- rbind(tmp)
   }
   return(m)
@@ -594,13 +598,11 @@ CreateEpiDatasetPerStudy <- function(variables, study, files="1or2", chatty=TRUE
 # CreateEpiDatasetPerStudy(vars, study)
 
 
-CreateEpiDataset <- function(variables, studies, chatty=TRUE){
+CreateEpiDataset <- function(variables, studies, files="1or2", chatty=TRUE){
 # then each row will be compassID, netcdfID, study, data
-  res <- matrix(nrow=0, ncol=length(variables)+3)
+  res <- matrix(nrow=0, ncol=length(variables)+4)
   for(i in studies){
-    res <- rbind(res, CreateEpiDatasetPerStudy(variables, i))
-    if(chatty)
-      print(paste("working on", i, "; dim =", paste(dim(res), collapse="_")))
+    res <- rbind(res, CreateEpiDatasetPerStudy(variables, i, files, chatty))
   }
   return(res)
 }
