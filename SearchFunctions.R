@@ -452,28 +452,36 @@ MakeSNPDetailsTable_GIGS <- function(snps, chatty=TRUE){
 ##  ---------------------------------  ##
 
 
-WhichEpiFilesToInclude <- function(epifiles, studies){
-  epifiles <- epifiles[-grep("0.csv", epifiles)]  #not ready
-  epifiles <- epifiles[-grep("e.csv", epifiles)]  # exome chip
-  epifiles <- epifiles[-grep("osflag.csv", epifiles)]  #
-  epifiles <- epifiles[-grep("seq.csv", epifiles)]  # exome chip
-  epifiles <- epifiles[-grep("ad.csv", epifiles)]  # adenoma
-  epifiles <- epifiles[-grep("hf.csv", epifiles)]  # 
-  epifiles <- epifiles[-grep("_r.csv", epifiles)]  # 
-  epifiles <- epifiles[grep("\\d+", epifiles)]  #remove if no study number
-  epifilesToInclude <- NULL
-  sst <- NULL
-  for(i in epifiles){  #which studies to include
-    studyname <- strsplit(i, "/", fixed=TRUE)[[1]][length(strsplit(i, "/", fixed=TRUE)[[1]])]
-    studyname <- strsplit(studyname, ".", fixed=TRUE)[[1]][1]
-    if(sub("\\d*$", "", studyname) %in% sub("\\d*$", "", studies)){
-      sst <- c(sst, studyname)
-      epifilesToInclude[i] <- TRUE
+WhichEpiFilesToInclude <- function(epifiles, studies, files="1or2"){
+  if(files == "1or2"){
+    epifiles <- epifiles[-grep("0.csv", epifiles)]  #not ready
+    epifiles <- epifiles[-grep("e.csv", epifiles)]  # exome chip
+    epifiles <- epifiles[-grep("osflag.csv", epifiles)]  #
+    epifiles <- epifiles[-grep("seq.csv", epifiles)]  # exome chip
+    epifiles <- epifiles[-grep("ad.csv", epifiles)]  # adenoma
+    epifiles <- epifiles[-grep("hf.csv", epifiles)]  # 
+    epifiles <- epifiles[-grep("_r.csv", epifiles)]  # 
+    epifiles <- epifiles[grep("\\d+", epifiles)]  #remove if no study number
+    epifilesToInclude <- NULL
+    sst <- NULL
+    for(i in epifiles){  #which studies to include
+      studyname <- strsplit(i, "/", fixed=TRUE)[[1]][length(strsplit(i, "/", fixed=TRUE)[[1]])]
+      studyname <- strsplit(studyname, ".", fixed=TRUE)[[1]][1]
+      if(sub("\\d*$", "", studyname) %in% sub("\\d*$", "", studies)){
+        sst <- c(sst, studyname)
+        epifilesToInclude[i] <- TRUE
+      }
+      else
+        epifilesToInclude[i] <- FALSE
     }
-    else
-      epifilesToInclude[i] <- FALSE
-  }
   return(list(files=epifiles[epifilesToInclude], sst=sst))
+  }
+  if(files == "specific"){
+    csvfilenames <- paste0(studies, ".csv")
+    epifilelast <-  matrix(unlist(sapply(epifiles, strsplit, split="/")), ncol=length(strsplit(epifiles[1], "/")[[1]]), byrow=TRUE)[,8]
+    epifiles <- epifiles[epifilelast %in% csvfilenames]
+  }
+  return(list(files=epifiles, sst=csvfilenames))
 }
 
 GiveStudiesNumbers <- function(study){
@@ -568,12 +576,12 @@ MakeDataAvailabilityTable <- function(epivars=NULL, survvars=NULL, studies, path
 
 
 
-CreateEpiDatasetPerStudy <- function(variables, study){
+CreateEpiDatasetPerStudy <- function(variables, study, files="1or2", chatty=TRUE){
 # gather variables for a single study
   if(any(c("censor", "crcdeath", "time_surv") %in% variables))
     variables[-which(variables %in% c("censor", "crcdeath", "time_surv"))]
   epi1 <- MakePathtoPeters_U("/Data\\ Harmonization/Post-harmonization/Data/", server="cs")
-  epifiles <- WhichEpiFilesToInclude(system(paste0("ls ", epi1, "*.csv"), intern=TRUE), study)
+  epifiles <- WhichEpiFilesToInclude(system(paste0("ls ", epi1, "*.csv"), intern=TRUE), study, files=files)
   m <- matrix(nrow=0, ncol=length(variables)+3)
   colnames(m) <- c("compassID", "netcdfID", "study", variables)
   for(j in epifiles$files){
