@@ -632,12 +632,12 @@ CreateSurvivalDataset <- function(variables="all", studies="all"){
   return(tmp)
 }
 
-MergeEpiAndSurvivalData <- function(EpiDataset, SurvivalDataset){
-  mergedSet <- merge(EpiDataset, SurvivalDataset,by="netcdfid", all=TRUE)  #compare compassID
+MergeEpiAndSurvivalData <- function(EpiDataset, SurvivalDataset, merge_by="netcdfid"){
+  mergedSet <- merge(EpiDataset, SurvivalDataset,by=merge_by, all=TRUE)  #compare compassID
   if(!all(mergedSet$compassid.x == mergedSet$compassid.y, na.rm=TRUE))
     return("stop, merge didn't work right")
-  if(all(mergedSet$compassid.x == mergedSet$compassid.y, na.rm=TRUE))
-   mergedSet <- mergedSet[,-which(colnames(mergedSet) == "compassid.y")]
+#  if(all(mergedSet$compassid.x == mergedSet$compassid.y, na.rm=TRUE))
+#   mergedSet <- mergedSet[,-which(colnames(mergedSet) == "compassid.y")]
 #  mergedSet <- mergedSet[,-which(colnames(mergedSet) == "sex.y")]
   return(mergedSet)
 }
