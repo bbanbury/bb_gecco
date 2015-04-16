@@ -605,10 +605,12 @@ CreateEpiDataset <- function(variables, studies, chatty=TRUE){
   return(res)
 }
 
-CreateSurvivalDataset <- function(variables, studies="all"){
+CreateSurvivalDataset <- function(variables="all", studies="all"){
 # make dataset with 
   if(studies == "all")
     studies <- c("101ccfr","109colo23", "112mec", "114phs", "115vital", "108dachs", "103dals", "111fccs", "110hpfs", "113nhs", "102arctic", "117hrtccr", "104plco", "105whi")
+  if(variables == "all")
+    variables <- c("age_dx", "anydeath", "crcdeath", "time_surv", "stage_update", "sex")
   survdir <- MakePathtoPeters_U("/GECCO_Working/mpassareworking/Survival/Combined\ Survival\ Update\ Has\ Surv\ Pooled.csv")
   tmp <- read.csv(survdir, stringsAsFactors=FALSE)
   variables <- variables[which(variables %in% colnames(tmp))]
@@ -634,8 +636,7 @@ MergeEpiAndSurvivalData <- function(EpiDataset, SurvivalDataset){
     return("stop, merge didn't work right")
   if(all(mergedSet$compassid.x == mergedSet$compassid.y, na.rm=TRUE))
    mergedSet <- mergedSet[,-which(colnames(mergedSet) == "compassid.y")]
-#  if(all(mergedSet$sex.x == mergedSet$sex.y, na.rm=TRUE))
-  mergedSet <- mergedSet[,-which(colnames(mergedSet) == "sex.y")]
+#  mergedSet <- mergedSet[,-which(colnames(mergedSet) == "sex.y")]
   return(mergedSet)
 }
 
