@@ -49,6 +49,25 @@ MakePathtoPeters_U <- function(directory, server="home"){
 }
 
 
+MakePathtoNewcomb_P <- function(directory, server="cs"){
+# make path no matter if on local or rhino
+# server can also be "cs" for "researcher server
+  if(system("hostname", intern=TRUE) == "DHCP169022.FHCRC.ORG"){
+    bp <- "/Volumes/bbanbury/Newcomb_P/"
+    if(server == "cs")
+      bp <- sub("bbanbury", "researcher", bp)
+  }
+  if(length(grep("rhino", system("hostname", intern=TRUE))) > 0){
+    bp <- "/shared/silo_researcher/Newcomb_P/"
+    if(server == "cs")
+      bp <- sub("silo", "cs", bp)
+  }
+  directory <- sub("^/", "", directory) # remove if it starts with a "/"
+  return(paste0(bp, directory))
+}
+
+
+
 print.snp_names <- function(x, ...){
   writeLines("SNP names data contains:")
   for(i in sequence(length(x))){
@@ -120,6 +139,10 @@ GetBatch <- function(ncdfFileName){
 }
 
 
+GetLastFileNameInPath <- function(fileWithPath){
+  return(strsplit(fileWithPath, "/", fixed=TRUE)[[1]][length(strsplit(fileWithPath, "/", fixed=TRUE)[[1]])])
+}
+
 
 ##  ---------------------------------  ##
 ##                                     ##
@@ -163,7 +186,7 @@ FindSNPposition_hapmap <- function(snp_name, directory, studies=NULL, chatty=TRU
       print(paste("Working on", i))
     snps_names_file <- system(paste0("ls ", directory, "*", i, "*"), intern=TRUE)
     for(j in snps_names_file){
-      nafile <- strsplit(j, "/", fixed=TRUE)[[1]][length(strsplit(j, "/", fixed=TRUE)[[1]])]
+      nafile <- GetLastFileNameInPath(j)
       load(j)
       if("snp_names" %in% ls()){
         rs_positions <- find_rs_hapmap(rs_numbers, snp_names)
@@ -465,7 +488,7 @@ WhichEpiFilesToInclude <- function(epifiles, studies, files="1or2"){
     epifilesToInclude <- NULL
     sst <- NULL
     for(i in epifiles){  #which studies to include
-      studyname <- strsplit(i, "/", fixed=TRUE)[[1]][length(strsplit(i, "/", fixed=TRUE)[[1]])]
+      studyname <- GetLastFileNameInPath(i)
       studyname <- strsplit(studyname, ".", fixed=TRUE)[[1]][1]
       if(sub("\\d*$", "", studyname) %in% sub("\\d*$", "", studies)){
         sst <- c(sst, studyname)
@@ -580,6 +603,8 @@ CreateEpiDatasetPerStudy <- function(variables, study, files="1or2", chatty=TRUE
 # gather variables for a single study
   if(any(c("censor", "crcdeath", "time_surv") %in% variables))
     variables[-which(variables %in% c("censor", "crcdeath", "time_surv"))]
+  if(!"outc" %in% variables)
+    variables <- c("outc", variables)
   epi1 <- MakePathtoPeters_U("/Data\\ Harmonization/Post-harmonization/Data/", server="cs")
   epifiles <- WhichEpiFilesToInclude(system(paste0("ls ", epi1, "*.csv"), intern=TRUE), study, files=files)
   m <- matrix(nrow=0, ncol=length(variables)+4)
@@ -598,8 +623,10 @@ CreateEpiDatasetPerStudy <- function(variables, study, files="1or2", chatty=TRUE
 # CreateEpiDatasetPerStudy(vars, study)
 
 
-CreateEpiDataset <- function(variables, studies, files="1or2", chatty=TRUE){
+CreateEpiDataset <- function(variables, studies=NULL, files="1or2", chatty=TRUE){
 # then each row will be compassID, netcdfID, study, data
+  if(is.null(studies))
+    studies <- c("101ccfr","109colo23", "112mec", "114phs", "115vital", "108dachs", "103dals", "111fccs", "110hpfs", "113nhs", "102arctic", "117hrtccr", "104plco", "105whi")
   res <- matrix(nrow=0, ncol=length(variables)+4)
   for(i in studies){
     res <- rbind(res, CreateEpiDatasetPerStudy(variables, i, files, chatty))
@@ -607,41 +634,117 @@ CreateEpiDataset <- function(variables, studies, files="1or2", chatty=TRUE){
   return(res)
 }
 
-CreateSurvivalDataset <- function(variables="all", studies="all"){
-# make dataset with 
-  if(studies == "all")
-    studies <- c("101ccfr","109colo23", "112mec", "114phs", "115vital", "108dachs", "103dals", "111fccs", "110hpfs", "113nhs", "102arctic", "117hrtccr", "104plco", "105whi")
+CreateSurvivalDataset <- function(variables="all", studies=NULL, data="pooledGecco"){
+#make dataset with "pooledGecco", "separateGecco", "separateIsacc"
+  if(!is.null(studies))
+    stop("need to fix this so that it doesn't return all studies")
   if(variables == "all")
-    variables <- c("age_dx", "anydeath", "crcdeath", "time_surv", "stage_update", "sex")
-  survdir <- MakePathtoPeters_U("/GECCO_Working/mpassareworking/Survival/Combined\ Survival\ Update\ Has\ Surv\ Pooled.csv")
-  tmp <- read.csv(survdir, stringsAsFactors=FALSE)
-  variables <- variables[which(variables %in% colnames(tmp))]
-  if("103dals" %in% studies){
-    tmp2 <- read.csv(MakePathtoPeters_U("GECCO_Working/Jihyounworking/Survival/DALS-CPS-II/DALS-surv-dat-04152014.csv"), stringsAsFactors=FALSE)
-    colnames(tmp2) <- colnames(tmp)
-    tmp <- rbind(tmp, tmp2)
+    variables <- c("age_dx", "censor", "crcdeath", "time_surv", "stage_update", "sex")
+  variables <- tolower(unique(c("compassid", "netcdfid", "study", variables)))
+  if(data == "pooledGecco"){
+    survdir <- MakePathtoPeters_U("/GECCO_Working/mpassareworking/Survival/Combined\ Survival\ Update\ Has\ Surv\ Pooled.csv")
+    tmp <- read.csv(survdir, stringsAsFactors=FALSE)
+    variables <- variables[which(variables %in% colnames(tmp))]
+    if("103dals" %in% studies){
+      tmp2 <- read.csv(MakePathtoPeters_U("GECCO_Working/Jihyounworking/Survival/DALS-CPS-II/DALS-surv-dat-04152014.csv"), stringsAsFactors=FALSE)
+      colnames(tmp2) <- colnames(tmp)  #103dals has anydeath rather than censor
+      tmp <- rbind(tmp, tmp2)
+    }
+    if("CPS2" %in% studies){
+      tmp2 <- read.csv(MakePathtoPeters_U("GECCO_Working/Jihyounworking/Survival/DALS-CPS-II/CPS2-surv-dat-04152014.csv"), stringsAsFactors=FALSE)
+      colnames(tmp2) <- colnames(tmp)
+      tmp <- rbind(tmp, tmp2)
+    }
+    res <- tmp[,which(colnames(tmp) %in% variables)]  #remove when not all variables
+    res[,1] <- sapply(res[,1], tolower)
+    res[,1] <- sapply(res[,1], GiveStudiesNumbers) 
   }
-  if("CPS2" %in% studies){
-    tmp2 <- read.csv(MakePathtoPeters_U("GECCO_Working/Jihyounworking/Survival/DALS-CPS-II/CPS2-surv-dat-04152014.csv"), stringsAsFactors=FALSE)
-    colnames(tmp2) <- colnames(tmp)
-    tmp <- rbind(tmp, tmp2)
+  if(data == "separateGecco"){  #need to pull in the studies separately, which should maximize the amount of data
+    survdir <- MakePathtoPeters_U("/GECCO_Working/mpassareworking/Survival/Data/")
+    files <- system(paste0("ls ", survdir, "*.csv"), intern=TRUE)
+    files <- files[-grep("Combined", files)]
+    res <- matrix(nrow=0, ncol=length(variables))
+    colnames(res) <- variables
+    studiesToKeep <- rep(NA, length(files))
+    studiesFromFilenames <- sapply(files, GetLastFileNameInPath, USE.NAMES=FALSE)
+    for(i in sequence(length(files))){
+      tmp <- read.csv(files[i], stringsAsFactors=FALSE)  #need a clever way of dropping studies
+      colnames(tmp) <- tolower(colnames(tmp))
+      if("anydeath" %in% colnames(tmp))
+        colnames(tmp)[which(colnames(tmp) == "anydeath")] <- "censor"  #stinking CPS2 comes in as anydeath
+      tmp <- tmp[,which(colnames(tmp) %in% variables)]  #remove when not all variables
+      if(any(!colnames(res) %in% colnames(tmp))){
+        whichToAdd <- colnames(res)[which(!colnames(res) %in% colnames(tmp))]
+        for(vta in whichToAdd){
+          tmp <- cbind(tmp, rep(NA, dim(tmp)[1]))
+          colnames(tmp)[dim(tmp)[2]] <- vta
+        }
+      }
+#      res <- rbind(res, tmp)
+      studiesToKeep[i] <- length(which(is.na(tmp)))/dim(tmp)[1]
+    }
+    names(studiesToKeep) <- studiesFromFilenames
+    studiesToUse <- ToKeepOrNot(studiesToKeep)  #might be a good place to add certain studies only
+    for(i in sequence(length(files))){  #only kept files
+      if(studiesToUse[i]){
+        print(paste("adding", names(studiesToUse[i])))
+        tmp <- read.csv(files[i], stringsAsFactors=FALSE)
+        colnames(tmp) <- tolower(colnames(tmp))
+        if("anydeath" %in% colnames(tmp))
+          colnames(tmp)[which(colnames(tmp) == "anydeath")] <- "censor"  #stinking CPS2 comes in as anydeath
+        tmp <- tmp[,which(colnames(tmp) %in% variables)]  #remove when not all variables
+        if(any(!colnames(res) %in% colnames(tmp))){
+          whichToAdd <- colnames(res)[which(!colnames(res) %in% colnames(tmp))]
+          for(vta in whichToAdd){
+            tmp <- cbind(tmp, rep(NA, dim(tmp)[1]))
+            colnames(tmp)[dim(tmp)[2]] <- vta
+          }
+        }
+        res <- rbind(res, tmp)
+      }
+    }
+    res <- res[-which(duplicated(res[,1])), ]
   }
-  tmp <- tmp[,which(colnames(tmp) %in% c("compassid", "netcdfid", "study", variables))]  #remove when not all variables
-  tmp[,1] <- sapply(tmp[,1], tolower)
-  tmp[,1] <- sapply(tmp[,1], GiveStudiesNumbers) 
-  return(tmp)
+  if(data == "separateIsacc"){
+    survdir <- MakePathtoNewcomb_P("/Molecular Correlates_ISACC/Survival data harmonization/Harmonized data/", "cs")
+    files <- list.files(path="/Volumes/researcher/Newcomb_P/Molecular Correlates_ISACC/Survival data harmonization/Harmonized data/", pattern="csv")
+    files <- files[-grep("Combined", files)]
+    res <- matrix(nrow=0, ncol=length(variables))
+    colnames(res) <- variables
+    for(i in sequence(length(files))){
+      print(paste("adding", files[i]))
+      tmp <- read.csv(files[i], stringsAsFactors=FALSE)
+      colnames(tmp) <- tolower(colnames(tmp))
+      if("anydeath" %in% colnames(tmp))
+        colnames(tmp)[which(colnames(tmp) == "anydeath")] <- "censor"  #stinking CPS2 comes in as anydeath
+      tmp <- tmp[,which(colnames(tmp) %in% variables)]  #remove when not all variables
+      if(any(!colnames(res) %in% colnames(tmp))){
+        whichToAdd <- colnames(res)[which(!colnames(res) %in% colnames(tmp))]
+        for(vta in whichToAdd){
+          tmp <- cbind(tmp, rep(NA, dim(tmp)[1]))
+          colnames(tmp)[dim(tmp)[2]] <- vta
+        }
+      }
+      res <- rbind(res, tmp)
+    }  
+  }   
+  return(res)
 }
 
-MergeEpiAndSurvivalData <- function(EpiDataset, SurvivalDataset, merge_by="netcdfid"){
-  mergedSet <- merge(EpiDataset, SurvivalDataset,by=merge_by, all=TRUE)  #compare compassID
-  if(!all(mergedSet$compassid.x == mergedSet$compassid.y, na.rm=TRUE))
-    return("stop, merge didn't work right")
-#  if(all(mergedSet$compassid.x == mergedSet$compassid.y, na.rm=TRUE))
-#   mergedSet <- mergedSet[,-which(colnames(mergedSet) == "compassid.y")]
-#  mergedSet <- mergedSet[,-which(colnames(mergedSet) == "sex.y")]
-  return(mergedSet)
-}
 
+ToKeepOrNot <- function(vectorofstudiestokeep){
+    #return a vector as long with T/F to keep per study
+  name <- sapply(names(vectorofstudiestokeep), gsub, pattern="[-_]", replacement=" ", USE.NAMES=FALSE)
+  for(i in sequence(length(name))){
+    name[i] <- strsplit(name[i], split=" ", fixed=TRUE)[[1]][1]
+  }  
+  keepVector <- rep(NA, length(name))
+  for(i in unique(name)){
+    keepVector[which(name == i)] <- vectorofstudiestokeep[which(name == i)] == min(vectorofstudiestokeep[which(name == i)])
+  }
+  names(keepVector) <- names(vectorofstudiestokeep)
+  return(keepVector)
+}
 
 
 MakeEpiDetailsTable <- function(variables) {
@@ -660,11 +763,38 @@ MakeEpiDetailsTable <- function(variables) {
 
 
 
+##  ---------------------------------  ##
+##                                     ##
+##          Merging Datasets           ##
+##                                     ##
+##  ---------------------------------  ##
+
+
+MergeEpiAndSurvivalData <- function(EpiDataset, SurvivalDataset, merge_by="compassid", all=TRUE){
+# maybe try to make this smart, bu detecting *.x or *.y columns and dealing with them
+  mergedSet <- merge(EpiDataset, SurvivalDataset, by=merge_by, all=all)  #compare compassID
+  if(!all(mergedSet$compassid.x == mergedSet$compassid.y, na.rm=TRUE))
+    return("stop, merge didn't work right")
+#  if(all(mergedSet$compassid.x == mergedSet$compassid.y, na.rm=TRUE))
+#   mergedSet <- mergedSet[,-which(colnames(mergedSet) == "compassid.y")]
+#  mergedSet <- mergedSet[,-which(colnames(mergedSet) == "sex.y")]
+  return(mergedSet)
+}
+
+
+## New function to merge survival/GWAS data
+# Do we have to go through epi data? 
 
 
 
-## New function to merge survival/epi data with GWAS data?
+## New function to merge epi/GWAS data?
 
+MergeEpiAndGIGSdata <- function(EpiDataset, GigsDataset, merge_by="netcdfid"){
+  mergedSet <- merge(EpiDataset, GigsDataset, by=merge_by, all=TRUE)  #compare compassID
+  if(!all(mergedSet$compassid.x == mergedSet$compassid.y, na.rm=TRUE))
+    return("stop, merge didn't work right")
+  return(mergedSet)
+}
 
 
 
