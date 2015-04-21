@@ -93,11 +93,12 @@ print.snp_location_info <- function(x, ...){
 }
 
 
-Use_snp_finder.py <- function(gene, upstream=0, downstream=0, snp_list="gigs", buildver="hg19", report.call=FALSE, chatty=TRUE){
+Use_snp_finder.py <- function(gene, upstream=0, downstream=0, snp_list="gigs", buildver="hg19", include_ncrna=FALSE, report.call=FALSE, chatty=TRUE){
 #this passes a gene to Chucks snp_finder py script
 # snp_list can be gigs, exome_pooled_20130624, hapmap_imputed_20120208, or combined_exome_1kgp
 #buildver can be hg18 or hg19 (use hg18 for hapmap imputed)
 #This won't work local until I add something to my machine to deal with databases
+# include_ncrna should not be run unless the first pass finds nothing. 
   allsnps <- NULL
   for(g in gene){
     if(chatty)
@@ -114,7 +115,7 @@ Use_snp_finder.py <- function(gene, upstream=0, downstream=0, snp_list="gigs", b
       allsnps <- rbind(allsnps, snps)
     }
     else
-      warning(paste(g, "not found in database"))
+      warning(paste(g, "not found in database, consider running with include_ncrna==TRUE"))
   }
   allsnps[,1] <- sapply(allsnps[,1], sub, pattern="chr", replacement="", USE.NAMES=FALSE)
   colnames(allsnps) <- c("position", "gene")
@@ -707,13 +708,13 @@ CreateSurvivalDataset <- function(variables="all", studies=NULL, data="pooledGec
   }
   if(data == "separateIsacc"){
     survdir <- MakePathtoNewcomb_P("/Molecular Correlates_ISACC/Survival data harmonization/Harmonized data/", "cs")
-    files <- list.files(path="/Volumes/researcher/Newcomb_P/Molecular Correlates_ISACC/Survival data harmonization/Harmonized data/", pattern="csv")
+    files <- list.files(path=survdir, pattern="csv")
     files <- files[-grep("Combined", files)]
     res <- matrix(nrow=0, ncol=length(variables))
     colnames(res) <- variables
     for(i in sequence(length(files))){
       print(paste("adding", files[i]))
-      tmp <- read.csv(files[i], stringsAsFactors=FALSE)
+      tmp <- read.csv(paste0(survdir, files[i]), stringsAsFactors=FALSE)
       colnames(tmp) <- tolower(colnames(tmp))
       if("anydeath" %in% colnames(tmp))
         colnames(tmp)[which(colnames(tmp) == "anydeath")] <- "censor"  #stinking CPS2 comes in as anydeath
