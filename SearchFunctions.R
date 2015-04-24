@@ -2,7 +2,7 @@
 ##                                     ##
 ##        Data Search Functions        ##
 ##             (c) BBanbury            ##
-##             15 April 15             ##
+##             24 April 15             ##
 ##                                     ##
 ##  ---------------------------------  ##
 
@@ -10,7 +10,7 @@
 require(ncdf)
 require(ncdf4)
 
-
+## In the middle of transforming the files to a single function throughout.  Alos need to finish documentation for all the functions after the regulatory ones.  
 
 
 ##  ---------------------------------  ##
@@ -20,17 +20,52 @@ require(ncdf4)
 ##  ---------------------------------  ##
 
 
-ChangeStudyNames <- function(study){
-# study names changes from paper proposals to datasets
-  if(study == "ASTERISK") return("111fccs")
-  else if(study == "OFCCR") return("102arctic")
-  else if(study == "PMH-CCFR") return("117hrtccr")
-  else return(study)
+#' List of file directories for gecco data 
+#' 
+#' This function will add the specific path plus root directory  
+#' @param whichData Specifies which data you need, and will point to a file/directory
+#' @export
+#' @return Returns a path to the directory. THis function is where we can store where data lives in directories, so that when we change where data lives, we only have to change it once.  
+#' @seealso \link{MakePathtoNewcomb_P} \link{MakePathtoPeters_U}
+#' @examples
+#' DataLocation(hapmap_snp_names)
+DataLocation <- function(whichData){
+
+  # GWAS
+  if(whichData == "hapmap_snp_names")  return(MakePathtoPeters_U("/GECCO_Working/barb_working/HapMap_data/snp_names/"))
+  if(whichData == "hapmap")  return(MakePathtoPeters_U("/hapmap.data/GECCO_Data/"))
+  if(whichData == "hapmap_SNPinfo")  return(MakePathtoPeters_U("GECCO_Working/barb_working/HapMap_data/"))
+  if(whichData == "rs_to_gigs_file")  return(MakePathtoPeters_U("/GECCO_Working/barb_working/rs_names_to_gigs_positions.csv"))
+  if(whichData == "GIGSv2")  return(MakePathtoPeters_U("/GECCO_DATA_POOLED/GIGS_V2/"))
+  if(whichData == "GIGS_snp_names")  return(MakePathtoPeters_U("/GECCO_DATA_POOLED/GIGS_V2/snp_files/*.csv"))
+
+  # Epi / Survival
+  if(whichData == "harmonized-epi")  return(MakePathtoPeters_U("/Data\\ Harmonization/Post-harmonization/Data/", server="cs"))
+  if(whichData == "Jihyoun-dals")  return(MakePathtoPeters_U("GECCO_Working/Jihyounworking/Survival/DALS-CPS-II/DALS-surv-dat-04152014.csv"))
+  if(whichData == "Jihyoun-cps2")  return(MakePathtoPeters_U("GECCO_Working/Jihyounworking/Survival/DALS-CPS-II/CPS2-surv-dat-04152014.csv"))
+  if(whichData == "pooledEpi")  return(MakePathtoPeters_U("/GECCO_Working/mpassareworking/Survival/Combined\ Survival\ Update\ Has\ Surv\ Pooled.csv"))
+  if(whichData == "listOfEpiVars")  return(MakePathtoPeters_U("/GECCO_Working/barb_working/listOfVariables.Rdata"))
+  if(whichData == "separate-epi")  return(MakePathtoPeters_U("/GECCO_Working/mpassareworking/Survival/Data/"))
+  if(whichData == "separate-isacc")  return(MakePathtoNewcomb_P("/Molecular Correlates_ISACC/Survival data harmonization/Harmonized data/", "cs"))
+
+  #software or other
+  if(whichData == "")  return(MakePathtoPeters_U("")
+  if(whichData == "")  return(MakePathtoPeters_U("")
+  if(whichData == "software")  return(MakePathtoPeters_U("/PetersGrp/GECCO_Software/"))
+
 }
-# ChangeStudyNames("OFCCR")
-# sapply(studies, ChangeStudyNames)
 
 
+#' Make a directory path 
+#' 
+#' This function will add the root directory path to Peters_U folder.  
+#' @param directory The endpoint directory  
+#' @param server Which server to use, either "home" or "cs"
+#' @export
+#' @return Returns a path to the directory. This function will auto detect which host a user is on, and create a path depending on the host. 
+#' @seealso \link{MakePathtoNewcomb_P}
+#' @examples
+#' MakePathtoPeters_U("/GECCO_Working", server="cs")
 MakePathtoPeters_U <- function(directory, server="home"){
 # make path no matter if on local or rhino
 # server can also be "cs" for "researcher server
@@ -49,6 +84,16 @@ MakePathtoPeters_U <- function(directory, server="home"){
 }
 
 
+#' Make a directory path 
+#' 
+#' This function will add the root directory path to Newcomb_P folder.  
+#' @param directory The endpoint directory  
+#' @param server Which server to use, either "home" or "cs"
+#' @export
+#' @return Returns a path to the directory. This function will auto detect which host a user is on, and create a path depending on the host. 
+#' @seealso \link{MakePathtoPeters_U}
+#' @examples
+#' MakePathtoNewcomb_P("/Molecular Correlates_ISACC", server="cs")
 MakePathtoNewcomb_P <- function(directory, server="cs"){
 # make path no matter if on local or rhino
 # server can also be "cs" for "researcher server
@@ -67,8 +112,36 @@ MakePathtoNewcomb_P <- function(directory, server="cs"){
 }
 
 
+#' Change Study Names
+#' 
+#' This function will change the study names from those in the ISACC paper proposal to the numerical name. 
+#' @param study One of: ASTERISK, OFCCR, PMH-CCFR
+#' @export
+#' @return Returns a new study name
+#' @examples
+#' ChangeStudyNames("ASTERISK")
+#' sapply(c("ASTERISK", "OFCCR", "PMH-CCFR"), ChangeStudyNames)
+ChangeStudyNames <- function(study){
+  if(study == "ASTERISK") return("111fccs")
+  else if(study == "OFCCR") return("102arctic")
+  else if(study == "PMH-CCFR") return("117hrtccr")
+  else return(study)
+}
 
-print.snp_names <- function(x, ...){
+
+#' print.snp_names
+#'
+#' Compact Display of SNP Names 
+#'
+#' This function prints a short summary of the SNP names to console, so it doesn't freeze up the machine if the list is huge. 
+#'
+#' @param x an object in the class "snp_names"
+#' @export
+#' @seealso \link{find_rs_hapmap} \link{FindSNPposition_hapmap}
+#' @examples
+#' load(DataLocation("hapmap_snp_names"), snp_names_113nhs_omni1.Rdata")
+#' print(snp_names)
+print.snp_names <- function(x){
   writeLines("SNP names data contains:")
   for(i in sequence(length(x))){
     writeLines(paste("     ", names(x)[i], length(x[[i]])))
@@ -76,34 +149,71 @@ print.snp_names <- function(x, ...){
 }
 
 
+#' print.snps_in_gene_regions
+#'
+#' Compact Display of SNPs in gene regions
+#'
+#' This function prints a short summary of the SNP names to console, so it doesn't freeze up the machine if the list is huge. 
+#'
+#' @param x an object in the class "snps_in_gene_regions"
+#' @export
+#' @seealso \link{Use_snp_finder.py} \link{FindSNPpositions_gigs}
+#' @examples
+#' Use_snp_finder.py("MYC")
 print.snps_in_gene_regions <- function(x, ...){
   writeLines(paste("This is a matrix of snps in", length(unique(x[,2])), "gene regions."))
   for(g in unique(x[,2])){
-    writeLines(paste("     -- ", g, "contains", length(which(x[,2] == g))))
+    writeLines(paste("     -- ", g, "has", length(which(x[,2] == g)), "snps"))
   }
 }
 
 
+#' print.snp_location_info
+#'
+#' Compact Display of SNPs locations
+#'
+#' This function prints a short summary of the SNP locations to console, so it doesn't freeze up the machine if the list is huge. 
+#'
+#' @param x an object in the class "snp_location_info"
+#' @export
+#' @seealso \link{FindSNPposition_hapmap} \link{FindSNPpositions_gigs} \link{MakeSNPDetailsTable_GIGS}
+#' @examples
+#' FindSNPposition_hapmap("rs2965667")
 print.snp_location_info <- function(x, ...){
   writeLines(paste("This is a matrix of", dim(x)[1], "snps", "and all their locality information"))
   writeLines(paste("Includes data from:"))
-  writeLines(paste0("     -- ", length(unique(x[,1])), " data source {", paste(unique(x[,1]), collapse=", "), "}"))
-  writeLines(paste0("     -- ", "from {", paste(unique(x[,2]), collapse=", "), "}"))
-  writeLines(paste0("     -- ", length(unique(x[,4])), " chromosomes {", paste(unique(x[,4]), collapse=", "), "}"))
+  writeLines(paste0("     -- ", length(unique(x[,1])), " studies {", paste(unique(x[,1]), collapse=", "), "}"))
+  writeLines(paste0("     -- ", length(unique(x[,2])), " batches {", paste(unique(x[,2]), collapse=", "), "}"))
+  chromos <- sapply(unique(x[,4]), GetChromo, USE.NAMES=FALSE)
+  writeLines(paste0("     -- ", length(unique(chromos)), " chromosomes {", paste(unique(chromos), collapse=", "), "}"))
 }
 
 
+#' Use snp_finder.py program
+#'
+#' Use Chuck's snp_finder.py program
+#'
+#' This function is just a wrapper for Chucks snp_finder py script.  Pass it the same variables and it returns a matrix of matches.
+#'
+#' @param gene Gene in which to find snps
+#' @param upstream Distance upstream in bp
+#' @param downstream Distance downstream in bp
+#' @param snp_list Name of snp list to use. Options include: "gigs", "exome_pooled_20130624", "hapmap_imputed_20120208", or "combined_exome_1kgp"
+#' @param buildver Which human genome build to use, either "hg18" or "hg19" (use hg18 for hapmap imputed)
+#' @param include_ncrna Boolean, whether to include non-coding RNAs in the search (such as miRNA). Defaults to FALSE, however, if you do not find anything with that then try to run using TRUE to expand the search. 
+#' @param report.call Option to report the system call so you can run Chucks program via terminal.
+#' @param chatty Option to print progress to screen
+#' @export
+#' @return This function uses system calls, so it will not work on a Windows machine. If the program works and finds snps, then it will return a matrix in the class "snps_in_gene_regions ", that has two columns, one with the snp location and the other with the gene. 
+#' @seealso \link{print.snps_in_gene_regions} 
+#' @examples
+#' Use_snp_finder.py("MYC", 500, 500)
 Use_snp_finder.py <- function(gene, upstream=0, downstream=0, snp_list="gigs", buildver="hg19", include_ncrna=FALSE, report.call=FALSE, chatty=TRUE){
-#this passes a gene to Chucks snp_finder py script
-# snp_list can be gigs, exome_pooled_20130624, hapmap_imputed_20120208, or combined_exome_1kgp
-#buildver can be hg18 or hg19 (use hg18 for hapmap imputed)
-#This won't work local until I add something to my machine to deal with databases
-# include_ncrna should not be run unless the first pass finds nothing. 
   allsnps <- NULL
   for(g in gene){
     if(chatty)
       print(paste("working on", g))
-    path <- MakePathtoPeters_U("/PetersGrp/GECCO_Software/")
+    path <- DataLocation("software")
     com <- paste0(path, "bin/snp_finder.py --db ", path, "snp.db --gene ", g, " -u ", upstream, " -d ", downstream, " -b ", buildver, " --snp_list ", snp_list)
     if(report.call)
       print(com)
@@ -124,25 +234,72 @@ Use_snp_finder.py <- function(gene, upstream=0, downstream=0, snp_list="gigs", b
 }
 
 
+#' Get Chromosome
+#'
+#' Get Chromosome Number
+#'
+#' This function returns a chromosome from a filename 
+#'
+#' @param ncdfFileName An ncdf file name with chromosome number at the end
+#' @export
+#' @seealso \link{GetStudy} \link{GetBatch} \link{GetLastFileNameInPath}
+#' @examples
+#' GetChromo("101ccfr_usc2_merged_dosage_5.nc")
 GetChromo <- function(ncdfFileName){
+  ncdfFileName  <- GetLastFileNameInPath(ncdfFileName)
   return(strsplit(ncdfFileName, "[_.]")[[1]][length(strsplit(ncdfFileName, "[_.]")[[1]]) - 1])
 }
-# GetChromo("101ccfr_usc2_merged_dosage_5.nc")
 
 
+#' Get Study
+#'
+#' Get Study out of ncdf file name
+#'
+#' This function returns a study from a filename 
+#'
+#' @param ncdfFileName An ncdf file name with study name number at the beginning
+#' @export
+#' @seealso \link{GetChromo} \link{GetBatch} \link{GetLastFileNameInPath}
+#' @examples
+#' GetStudy("101ccfr_usc2_merged_dosage_5.nc")
 GetStudy <- function(ncdfFileName){
+  ncdfFileName  <- GetLastFileNameInPath(ncdfFileName)
   return(strsplit(ncdfFileName, "[_.]")[[1]][1])
 }
 
 
+#' Get Batch
+#'
+#' Get Batch out of ncdf file name
+#'
+#' This function returns a batch from a filename 
+#'
+#' @param ncdfFileName An ncdf file name with batch name number 
+#' @export
+#' @seealso \link{GetChromo} \link{GetStudy} \link{GetLastFileNameInPath}
+#' @examples
+#' GetBatch("101ccfr_usc2_merged_dosage_5.nc")
 GetBatch <- function(ncdfFileName){
+  ncdfFileName  <- GetLastFileNameInPath(ncdfFileName)
   return(strsplit(ncdfFileName, "[_.]")[[1]][2])
 }
 
 
+#' Get File Name without Path
+#'
+#' Get a filename without the whole path
+#'
+#' This function strips all path information from a file, and returns just the name of the file.
+#'
+#' @param fileWithPath An ncdf file name with or without a whole path
+#' @export
+#' @seealso \link{GetChromo} \link{GetStudy} \link{GetLastFileNameInPath}
+#' @examples
+#' GetLastFileNameInPath("/directory/to/remove/101ccfr_usc2_merged_dosage_5.nc")
 GetLastFileNameInPath <- function(fileWithPath){
   return(strsplit(fileWithPath, "/", fixed=TRUE)[[1]][length(strsplit(fileWithPath, "/", fixed=TRUE)[[1]])])
 }
+
 
 
 ##  ---------------------------------  ##
@@ -176,12 +333,17 @@ find_rs_hapmap <- function(rs_number, snp_names){
 # find_rs_hapmap(c("rs2286139", "rs11127519"), snp_names)  #works with knowns
 
 
-FindSNPposition_hapmap <- function(snp_name, directory, studies=NULL, chatty=TRUE){
+FindSNPposition_hapmap <- function(rs_number, studies=NULL, chatty=TRUE){
 # for a vector of rs_numbers 
 # for a vector of c(studies)
 # create rs_positions table (and also rbind these to save)
 # and then rbind results
+  directory <- DataLocation("hapmap_snp_names")
   res <- NULL
+  if(is.null(studies))
+    studies <- c("101ccfr", "109colo23", "112mec", "114phs", "115vital", "108dachs", 
+                "103dals", "111fccs", "110hpfs", "113nhs", "102arctic", "117hrtccr", 
+                "104plco", "105whi")
   for(i in studies){
     if(chatty)
       print(paste("Working on", i))
@@ -190,7 +352,7 @@ FindSNPposition_hapmap <- function(snp_name, directory, studies=NULL, chatty=TRU
       nafile <- GetLastFileNameInPath(j)
       load(j)
       if("snp_names" %in% ls()){
-        rs_positions <- find_rs_hapmap(rs_numbers, snp_names)
+        rs_positions <- find_rs_hapmap(rs_number, snp_names)
         res <- rbind(res, rs_positions)
       }
     }
@@ -237,7 +399,7 @@ CreateDosageDataPerStudy <- function(rs_positions, directory=NULL){
 # CreateDosageDataPerStudy(rs_positions)
 
 
-CreateDosageDataAcrossStudies <- function(rs_positions, hapmap.data.dir=hapmap.data, saveToRdata=NULL){
+CreateDosageDataAcrossStudies <- function(rs_positions, saveToRdata=NULL){
   # for a vector of c(rs_numbers)
   # for a vector of c(studies)
   #if saveToData is a filename then it will save to working dir
@@ -245,7 +407,7 @@ CreateDosageDataAcrossStudies <- function(rs_positions, hapmap.data.dir=hapmap.d
   ddall <- data.frame(matrix(nrow=0, ncol=length(unique(rs_positions[,3]))+3))
   colnames(ddall) <- c("study", "batch", "netcdf_ID", unique(rs_positions[,3]))
   for(i in nostudies){
-    dir <- paste0(MakePathtoPeters_U(hapmap.data), GetStudy(i), "/", paste(GetStudy(i), GetBatch(i), sep="_"), "/mach/")
+    dir <- paste0(DataLocation("hapmap"), GetStudy(i), "/", paste(GetStudy(i), GetBatch(i), sep="_"), "/mach/")
     red_rs_positions <- rs_positions[grep(paste0(i, "_"), rs_positions[,4]),]
     dd <- CreateDosageDataPerStudy(red_rs_positions, dir)
     if(any(!colnames(ddall) %in% colnames(dd))){
@@ -270,7 +432,7 @@ GetCountAndBaselineAlleles <- function(rs_numbers, directory=NULL){
   res <- matrix(nrow=length(rs_numbers), ncol=4)
   colnames(res) <- c("rs_number", "position", "Allele1", "Allele2")
   res[,1] <- rs_numbers
-  p <- paste0(MakePathtoPeters_U(directory), "legend-augmented.nc")
+  p <- paste0(directory, "legend-augmented.nc")
   nc <- nc_open(p)
   nameVector <- ncvar_get(nc, "SNP_Name", start=c(1,1), count=c(-1,-1))
   locations <- which(nameVector %in% rs_numbers)
@@ -283,7 +445,7 @@ GetCountAndBaselineAlleles <- function(rs_numbers, directory=NULL){
 }
 
 
-CreateSNPDetailsTable <- function(rs_numbers, studies, directory){
+CreateSNPDetailsTable <- function(rs_numbers, studies){
   # hapmap
   # for a given list of snps, we want to create a table to be released with data
   # should include: snp name, which chromosome it is on, the number of studies genotyped, the number of studies imputed, the count allele, the baseline allele, the mean R2, the R2Range, the mean CAF, and the CAF range
@@ -293,10 +455,10 @@ CreateSNPDetailsTable <- function(rs_numbers, studies, directory){
   if(!all(dataNeeded %in% ls())){
     whichNotLoaded <- which(!dataNeeded %in% ls())
     for(i in sequence(length(whichNotLoaded))){
-      load(paste0(MakePathtoPeters_U(directory), dataNeeded[i], ".Rdata"))
+      load(paste0(DataLocation(hapmap_SNPinfo), dataNeeded[i], ".Rdata"))
     }
   }   
-  nc <- nc_open(paste0(MakePathtoPeters_U(directory), "legend-augmented.nc"))
+  nc <- nc_open(paste0(DataLocation("hapmap_SNPinfo"), "legend-augmented.nc"))
   dets <- matrix(nrow=length(rs_numbers), ncol=9)
   rownames(dets) <- rs_numbers
   colnames(dets) <- c("Chr", "NumStudGeno", "NumStudImpute", "Count", "Baseline", "MeanR2", "RangeR2", "MeanCAF", "RangeCAF")
@@ -309,7 +471,7 @@ CreateSNPDetailsTable <- function(rs_numbers, studies, directory){
       colsToInclude[i] <- FALSE
   }
   FlorasData <- cbind(snpsall[FlorasPos,], Imputed.matrix[FlorasPos, colsToInclude], R2.matrix[FlorasPos, colsToInclude], CAF.matrix[FlorasPos, colsToInclude])
-  alleles <- GetCountAndBaselineAlleles(rs_numbers, directory)
+  alleles <- GetCountAndBaselineAlleles(rs_numbers, MakePathtoPeters_U("hapmap_SNPinfo"))
   for(i in sequence(dim(dets)[1])){
     h <- which(FlorasData[,1] == rownames(dets)[i])
     dets[i,1] <- FlorasData[h,3]  # chromo
@@ -329,7 +491,7 @@ CreateSNPDetailsTable <- function(rs_numbers, studies, directory){
   }
   return(data.frame(dets))
 }
-# CreateSNPDetailsTable(rs, studies, directory="GECCO_Working/barb_working/HapMap_data/")
+# CreateSNPDetailsTable(rs, studies)
 
 
 
@@ -343,7 +505,7 @@ CreateSNPDetailsTable <- function(rs_numbers, studies, directory){
 
 find_rs_to_gigs <- function(rs_number, chatty=TRUE){
 # use rs_to_gigs_positions to match known rs numbers with positions in gigs
-  rs_to_gigs_file <- MakePathtoPeters_U("/GECCO_Working/barb_working/rs_names_to_gigs_positions.csv")
+  rs_to_gigs_file <- DataLocation("rs_to_gigs_file")
   res <- matrix(nrow=length(rs_number), ncol=2)
   colnames(res) <- c("rs_number", "gigs_number")
   for(i in sequence(length(rs_number))){
@@ -361,12 +523,12 @@ find_rs_to_gigs <- function(rs_number, chatty=TRUE){
 }
 
 
-Find_position_gigs_single_chromo <- function(position, chromosome, directory){
+Find_position_gigs_single_chromo <- function(position, chromosome){
 # position can be a vector of positions in the format 1:234
   locs <- matrix(nrow=length(position), ncol=5)
   colnames(locs) <- c("study", "gene", "gigs_name", "ncdf file", "position")
   file <- paste0("gigs_v2_chr", chromosome, ".nc")
-  nc <- nc_open(paste0(MakePathtoPeters_U(directory), file))
+  nc <- nc_open(paste0(DataLocation("GIGSv2"), file))
   snpnames <- ncvar_get(nc, "SNP_Name", start=c(1, 1), count=c(-1,-1))
   tocollect <- which(snpnames %in% position)
 #  study <- ncvar_get(nc, "Study")[tocollect]
@@ -383,7 +545,7 @@ Find_position_gigs_single_chromo <- function(position, chromosome, directory){
 }
 
 
-FindSNPpositions_gigs <- function(snp_name, directory="/GECCO_DATA_POOLED/GIGS_V2/", chatty=TRUE){
+FindSNPpositions_gigs <- function(snp_name, chatty=TRUE){
 # snp_name can either be a vector of positions (ie, 1:234) or in the class "snps_in_gene_regions"
   res <- NULL
   if(class(snp_name) == "snps_in_gene_regions")
@@ -398,7 +560,7 @@ FindSNPpositions_gigs <- function(snp_name, directory="/GECCO_DATA_POOLED/GIGS_V
       print(paste("working on chromosome", chr))
     
     positions <- splitpos[which(splitpos[,2] == chr), 1]
-    res2 <- Find_position_gigs_single_chromo(positions, chr, directory)
+    res2 <- Find_position_gigs_single_chromo(positions, chr)
     res <- rbind(res, res2)
   }
   res <- res[match(snps, res[,3]),]  #return in original order
@@ -410,7 +572,7 @@ FindSNPpositions_gigs <- function(snp_name, directory="/GECCO_DATA_POOLED/GIGS_V
 # gigs_positions <- FindSNPpositions_gigs(snp_name)
 
 
-CreateDosageDataFromGigs <- function(gigs_positions, directory="/GECCO_DATA_POOLED/GIGS_V2/", chatty=TRUE){
+CreateDosageDataFromGigs <- function(gigs_positions, chatty=TRUE){
   nochromos <- unique(gigs_positions[,4])
   ddall <- data.frame(matrix(nrow=0, ncol=length(unique(gigs_positions[,3]))+3))
   colnames(ddall) <- c("study", "batch", "netcdf_ID", unique(gigs_positions[,3]))
@@ -421,7 +583,7 @@ CreateDosageDataFromGigs <- function(gigs_positions, directory="/GECCO_DATA_POOL
     if(class(sub_gigs_positions) == "character"){
       sub_gigs_positions <- matrix(sub_gigs_positions, nrow=1)
     }
-    nc <- nc_open(paste0(MakePathtoPeters_U(directory), i))
+    nc <- nc_open(paste0(DataLocation("GIGSv2"), i))
     samples <- ncvar_get(nc, "Sample_ID", start=c(1, 1), count=c(-1,-1))
     study <- rep(GetStudy(i), length(samples))
     batch <- rep(GetBatch(i), length(samples))
@@ -448,7 +610,7 @@ MakeSNPDetailsTable_GIGS <- function(snps, chatty=TRUE){
     snps <- FindSNPpositions_gigs(snps)
   snps <- cbind(snps, sapply(snps[,4], GetChromo, USE.NAMES=FALSE))
   res <- matrix(nrow=0, ncol=7)
-  files <- MakePathtoPeters_U("/GECCO_DATA_POOLED/GIGS_V2/snp_files/*.csv")
+  files <- DataLocation("GIGS_snp_names")
   files <- system(paste("ls ", files), intern=TRUE)
   filesnames <- sapply(files, GetChromo, USE.NAMES=FALSE)
   files <- files[which(filesnames %in% unique(snps[,6]))]
@@ -530,7 +692,7 @@ GrepForEpiVars <- function(grepTerms, pathToEpiVariables){
 #  this function will grep for variable names that match some descriptor terms
 #  for example, find all variables that are associated with "smoking"
 #  careful with some terms, like "sex", "case" it will pull in other variables
-  load(paste0(MakePathtoPeters_U(pathToEpiVariables), "listOfEpiVariables.Rdata"))
+  load(DataLocation("listOfEpiVars"))
   variablesOfInterest <- NULL
   vars <- NULL
   for(i in grepTerms){
@@ -555,11 +717,11 @@ MakeDataAvailabilityTable <- function(epivars=NULL, survvars=NULL, studies, path
 #eventually make another argument with pathToEpiData, whenever it is housed together
   if(includeSurvival && is.null(survvars))
     stop("You need to add which survival variates")
-  load(paste0(MakePathtoPeters_U(pathToEpiVariables), "listOfEpiVariables.Rdata"))
+  load(DataLocation("listOfEpiVars"))
   if(includeSurvival)
       epivars <- c(epivars, survvars)
-  epi1 <- MakePathtoPeters_U("/Data\\ Harmonization/Post-harmonization/Data/", server="cs")
-  epifiles <- WhichEpiFilesToInclude(system(paste0("ls ", epi1, "*.csv"), intern=TRUE), studies)
+  epi1 <- DataLocation("harmonized-epi")
+  epifiles <- WhichEpiFilesToInclude(system(paste0("ls ", epi1, "*.csv"), intern=TRUE), studies, files="1or2")
   m <- matrix(nrow=length(epivars), ncol=length(epifiles$files))
   rownames(m) <- epivars
   colnames(m) <- epifiles$sst
@@ -569,16 +731,16 @@ MakeDataAvailabilityTable <- function(epivars=NULL, survvars=NULL, studies, path
   }
   if(includeSurvival){
     if("103dals" %in% studies){  ##  same as dals1 / dals2?  
-      tmp <- read.csv(MakePathtoPeters_U("GECCO_Working/Jihyounworking/Survival/DALS-CPS-II/DALS-surv-dat-04152014.csv"))
+      tmp <- read.csv(DataLocation("Jihyoun-dals"))
       m <- cbind(m, rownames(m) %in% colnames(tmp))
       colnames(m)[length(colnames(m))] <- "103dals"
     }
     if("CPS2" %in% studies){
-      tmp <- read.csv(MakePathtoPeters_U("GECCO_Working/Jihyounworking/Survival/DALS-CPS-II/CPS2-surv-dat-04152014.csv"))
+      tmp <- read.csv("Jihyoun-cps2")
       m <- cbind(m, rownames(m) %in% colnames(tmp))
       colnames(m)[length(colnames(m))] <- "CPS2"
     }
-    survdir <- MakePathtoPeters_U("/GECCO_Working/mpassareworking/Survival/Combined\ Survival\ Update\ Has\ Surv\ Pooled.csv")
+    survdir <- DataLocation("harmonized-epi")
     tmp <- read.csv(survdir)
     survcols <- tolower(as.character(unique(tmp[,1])))
     survcols <- sapply(survcols, GiveStudiesNumbers, USE.NAMES=FALSE)
@@ -606,7 +768,7 @@ CreateEpiDatasetPerStudy <- function(variables, study, files="1or2", chatty=TRUE
     variables[-which(variables %in% c("censor", "crcdeath", "time_surv"))]
   if(!"outc" %in% variables)
     variables <- c("outc", variables)
-  epi1 <- MakePathtoPeters_U("/Data\\ Harmonization/Post-harmonization/Data/", server="cs")
+  epi1 <- DataLocation("harmonized-epi")
   epifiles <- WhichEpiFilesToInclude(system(paste0("ls ", epi1, "*.csv"), intern=TRUE), study, files=files)
   m <- matrix(nrow=0, ncol=length(variables)+4)
   ind <- 0
@@ -643,16 +805,16 @@ CreateSurvivalDataset <- function(variables="all", studies=NULL, data="pooledGec
     variables <- c("age_dx", "censor", "crcdeath", "time_surv", "stage_update", "sex")
   variables <- tolower(unique(c("compassid", "netcdfid", "study", variables)))
   if(data == "pooledGecco"){
-    survdir <- MakePathtoPeters_U("/GECCO_Working/mpassareworking/Survival/Combined\ Survival\ Update\ Has\ Surv\ Pooled.csv")
+    survdir <- DataLocation("pooledEpi")
     tmp <- read.csv(survdir, stringsAsFactors=FALSE)
     variables <- variables[which(variables %in% colnames(tmp))]
     if("103dals" %in% studies){
-      tmp2 <- read.csv(MakePathtoPeters_U("GECCO_Working/Jihyounworking/Survival/DALS-CPS-II/DALS-surv-dat-04152014.csv"), stringsAsFactors=FALSE)
+      tmp2 <- read.csv(DataLocation("Jihyoun-dals"), stringsAsFactors=FALSE)
       colnames(tmp2) <- colnames(tmp)  #103dals has anydeath rather than censor
       tmp <- rbind(tmp, tmp2)
     }
     if("CPS2" %in% studies){
-      tmp2 <- read.csv(MakePathtoPeters_U("GECCO_Working/Jihyounworking/Survival/DALS-CPS-II/CPS2-surv-dat-04152014.csv"), stringsAsFactors=FALSE)
+      tmp2 <- read.csv(DataLocation("Jihyoun-cps2"), stringsAsFactors=FALSE)
       colnames(tmp2) <- colnames(tmp)
       tmp <- rbind(tmp, tmp2)
     }
@@ -661,7 +823,7 @@ CreateSurvivalDataset <- function(variables="all", studies=NULL, data="pooledGec
     res[,1] <- sapply(res[,1], GiveStudiesNumbers) 
   }
   if(data == "separateGecco"){  #need to pull in the studies separately, which should maximize the amount of data
-    survdir <- MakePathtoPeters_U("/GECCO_Working/mpassareworking/Survival/Data/")
+    survdir <- DataLocation("separate-epi")
     files <- system(paste0("ls ", survdir, "*.csv"), intern=TRUE)
     files <- files[-grep("Combined", files)]
     res <- matrix(nrow=0, ncol=length(variables))
@@ -707,7 +869,7 @@ CreateSurvivalDataset <- function(variables="all", studies=NULL, data="pooledGec
     res <- res[-which(duplicated(res[,1])), ]
   }
   if(data == "separateIsacc"){
-    survdir <- MakePathtoNewcomb_P("/Molecular Correlates_ISACC/Survival data harmonization/Harmonized data/", "cs")
+    survdir <- DataLocation("separate-isacc")
     files <- list.files(path=survdir, pattern="csv")
     files <- files[-grep("Combined", files)]
     res <- matrix(nrow=0, ncol=length(variables))
@@ -749,7 +911,7 @@ ToKeepOrNot <- function(vectorofstudiestokeep){
 
 
 MakeEpiDetailsTable <- function(variables) {
-  load(paste0(MakePathtoPeters_U("GECCO_Working/barb_working/"), "listOfVariables.Rdata"))
+  load(DataLocation("listOfEpiVars"))
   dets <- listOfVariables[which(listOfVariables[,2] %in% variables),]
   dets <- dets[match(variables, dets[,2]),]
   if(any(!variables %in% listOfVariables[,2]))
