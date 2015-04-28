@@ -584,11 +584,14 @@ CreateDosageDataFromGigs <- function(gigs_positions, chatty=TRUE){
     study <- rep(GetStudy(i), length(samples))
     batch <- rep(GetBatch(i), length(samples))
     ind <- 0
+    if(chatty)
+      print(paste0("working on ", i, "which has ", length(sub_gigs_positions[,5]), "snps"))
     for(snpi in sub_gigs_positions[,5]){
       ind <- ind + 1
+      if(chatty)
+        cat(i)
       lo <- as.numeric(sub_gigs_positions[,5][ind])
       if(ncvar_get(nc, "SNP_Name", start=c(1, lo), count=c(-1,1)) == sub_gigs_positions[ind,3]){  #here to check that rs number matches correctly
-        #dosage <- ncvar_get(nc, "Dosage", start=c(lo, 1), count=c(1,-1))
         dosage <- 2*ncvar_get(nc, "Prob_AA", start=c(lo,1), count=c(1, -1)) + ncvar_get(nc, "Prob_AB", start=c(lo,1), count=c(1,-1))
         probs <- cbind(probs, dosage)
         probsnamevector <- c(probsnamevector, paste0(sub_gigs_positions[ind,2], "_", sub_gigs_positions[ind,3]))
