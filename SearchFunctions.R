@@ -30,29 +30,26 @@ require(ncdf4)
 #' @examples
 #' DataLocation(hapmap_snp_names)
 DataLocation <- function(whichData){
-
   # GWAS
   if(whichData == "hapmap_snp_names")  return(MakePathtoPeters_U("/GECCO_Working/barb_working/HapMap_data/snp_names/"))
   if(whichData == "hapmap")  return(MakePathtoPeters_U("/hapmap.data/GECCO_Data/"))
   if(whichData == "hapmap_SNPinfo")  return(MakePathtoPeters_U("GECCO_Working/barb_working/HapMap_data/"))
   if(whichData == "rs_to_gigs_file")  return(MakePathtoPeters_U("/GECCO_Working/barb_working/rs_names_to_gigs_positions.csv"))
+  if(whichData == "gigs_sample") return(MakePathtoPeters_U("/GECCO_DATA_POOLED/GIGS_V1/sample_files/gigs_sample.Rdata"))
   if(whichData == "GIGSv2")  return(MakePathtoPeters_U("/GECCO_DATA_POOLED/GIGS_V2/"))
   if(whichData == "GIGS_snp_names")  return(MakePathtoPeters_U("/GECCO_DATA_POOLED/GIGS_V2/snp_files/*.csv"))
-
+  if(whichData == "gigs_pca")  return(MakePathtoPeters_U('GECCO_Working/keithworking/t275-work/pca.Rdata'))
   # Epi / Survival
   if(whichData == "harmonized-epi")  return(MakePathtoPeters_U("/Data\\ Harmonization/Post-harmonization/Data/", server="cs"))
   if(whichData == "Jihyoun-dals")  return(MakePathtoPeters_U("GECCO_Working/Jihyounworking/Survival/DALS-CPS-II/DALS-surv-dat-04152014.csv"))
   if(whichData == "Jihyoun-cps2")  return(MakePathtoPeters_U("GECCO_Working/Jihyounworking/Survival/DALS-CPS-II/CPS2-surv-dat-04152014.csv"))
-  if(whichData == "pooledEpi")  return(MakePathtoPeters_U("/GECCO_Working/mpassareworking/Survival/Combined\ Survival\ Update\ Has\ Surv\ Pooled.csv"))
+  if(whichData == "pooledSurv")  return(MakePathtoPeters_U("/GECCO_Working/mpassareworking/Survival/Combined\ Survival\ Update\ Has\ Surv\ Pooled.csv"))
   if(whichData == "listOfEpiVars")  return(MakePathtoPeters_U("/GECCO_Working/barb_working/listOfVariables.Rdata"))
   if(whichData == "separate-epi")  return(MakePathtoPeters_U("/GECCO_Working/mpassareworking/Survival/Data/"))
   if(whichData == "separate-isacc")  return(MakePathtoNewcomb_P("/Molecular Correlates_ISACC/Survival data harmonization/Harmonized data/", "cs"))
-
   #software or other
-  if(whichData == "")  return(MakePathtoPeters_U("")
-  if(whichData == "")  return(MakePathtoPeters_U("")
   if(whichData == "software")  return(MakePathtoPeters_U("/PetersGrp/GECCO_Software/"))
-
+  else stop("Can Not Find Data")
 }
 
 
@@ -471,7 +468,7 @@ CreateSNPDetailsTable <- function(rs_numbers, studies){
       colsToInclude[i] <- FALSE
   }
   FlorasData <- cbind(snpsall[FlorasPos,], Imputed.matrix[FlorasPos, colsToInclude], R2.matrix[FlorasPos, colsToInclude], CAF.matrix[FlorasPos, colsToInclude])
-  alleles <- GetCountAndBaselineAlleles(rs_numbers, MakePathtoPeters_U("hapmap_SNPinfo"))
+  alleles <- GetCountAndBaselineAlleles(rs_numbers, DataLocation("hapmap_SNPinfo"))
   for(i in sequence(dim(dets)[1])){
     h <- which(FlorasData[,1] == rownames(dets)[i])
     dets[i,1] <- FlorasData[h,3]  # chromo
@@ -558,12 +555,11 @@ FindSNPpositions_gigs <- function(snp_name, chatty=TRUE){
   for(chr in chromosomes){
     if(chatty) 
       print(paste("working on chromosome", chr))
-    
     positions <- splitpos[which(splitpos[,2] == chr), 1]
     res2 <- Find_position_gigs_single_chromo(positions, chr)
     res <- rbind(res, res2)
   }
-  res <- res[match(snps, res[,3]),]  #return in original order
+  #res <- res[match(snps, res[,3]),]  #return in original order...broken
   if(class(snp_name) == "snps_in_gene_regions")
     res[,2] <- snp_name[,2]
   class(res) <- "snp_location_info"
@@ -805,7 +801,7 @@ CreateSurvivalDataset <- function(variables="all", studies=NULL, data="pooledGec
     variables <- c("age_dx", "censor", "crcdeath", "time_surv", "stage_update", "sex")
   variables <- tolower(unique(c("compassid", "netcdfid", "study", variables)))
   if(data == "pooledGecco"){
-    survdir <- DataLocation("pooledEpi")
+    survdir <- DataLocation("pooledSurv")
     tmp <- read.csv(survdir, stringsAsFactors=FALSE)
     variables <- variables[which(variables %in% colnames(tmp))]
     if("103dals" %in% studies){
@@ -1032,22 +1028,22 @@ MergeEpiAndGIGSdata <- function(EpiDataset, GigsDataset, merge_by="netcdfid"){
 
 Yi_GetEpiDataFromGigs <- function(env){
 # can not include variables which are in the sameple file (they get added anyway)
-  load(MakePathtoPeters_U("/GECCO_DATA_POOLED/GIGS_V1/sample_files/gigs_sample.Rdata"))
+  load(DataLocation("gigs_sample"))
   if(any(env %in% colnames(gigs_sample)))
     env <- env[-which(env %in% colnames(gigs_sample))]
   if(any(c("censor", "crcdeath", "time_surv", "outc") %in% env)){
     env <- env[-which(env %in% c("censor", "crcdeath", "time_surv", "outc"))]
     warning("env includes survival, which will have to be done separately and merged")
   }
-  Gpath <- MakePathtoPeters_U('/GECCO_DATA_POOLED/GIGS_V2/')
-  nc <- nc_open(paste(Gpath, 'gigs_v2_chr22.nc', sep=''))
+  #Gpath <- MakePathtoPeters_U('/GECCO_DATA_POOLED/GIGS_V2/')
+  nc <- nc_open(paste(DataLocation("GIGSv2"), 'gigs_v2_chr22.nc', sep=''))
   SampleID <- ncvar_get( nc, 'Sample_ID')
   Study <- ncvar_get( nc, 'Study')
   gigs2 <- data.frame(SampleID,Study,stringsAsFactors=F)
   
   gigs2 <- merge(gigs_sample,gigs2,by.x='netcdfid',by.y='SampleID')
 
-  Epath <- MakePathtoPeters_U('/Data Harmonization/Post-harmonization/Data/', "cs")
+  Epath <- DataLocation("harmonized-epi")
 
   sample0 <- data.frame(study = c(101:104,105,108:115,117),
 		      lab = c('101ccfr0',"102arctic0",'103dals0','104plco0','105whi0',
@@ -1058,6 +1054,9 @@ Yi_GetEpiDataFromGigs <- function(env){
   #== Epi variables included 
   # env = c('famhx1','famhx_reln1','ibd','study_site','sex','asp_ref','aspirin','cancer_site_sum1',
   #        'cancer_site_sum2','age_dx','BMI5','age_dxsel','stage','stage2','stage3')
+
+  # if(any(env %in% colnames(gigs_sample)))   #add this...not sure it works yet
+  #   env <- env[-which(env %in% comnames(gigs_sample))]
         
   tab.sum <- data.frame(study=unique(gigs_sample$study),wgs=NA,epi=NA)
   rownames(tab.sum) = unique(gigs_sample$study)
@@ -1093,7 +1092,7 @@ Yi_GetEpiDataFromGigs <- function(env){
 
   #== change PCs to gigs2 PC
   epidata <- epidata[,!colnames(epidata) %in% c('pc1','pc2','pc3','Study')]
-  load(MakePathtoPeters_U('GECCO_Working/keithworking/t275-work/pca.Rdata'))
+  load(DataLocation("gigs_pca"))
   pcs <- data.frame(Sample_ID,PC[,1:3],stringsAsFactors=F)
   colnames(pcs) <- c('netcdfid','pc1','pc2','pc3')
   epidata <- merge(epidata,pcs,by='netcdfid')
