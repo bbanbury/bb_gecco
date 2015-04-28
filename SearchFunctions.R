@@ -545,28 +545,34 @@ Find_position_gigs_single_chromo <- function(position, chromosome){
 FindSNPpositions_gigs <- function(snp_name, chatty=TRUE){
 # snp_name can either be a vector of positions (ie, 1:234) or in the class "snps_in_gene_regions"
   res <- NULL
-  if(class(snp_name) == "snps_in_gene_regions")
+  if(class(snp_name) == "snps_in_gene_regions" | class(snp_name) == "matrix")
     snps <- snp_name[,1]
   else
     snps <- snp_name
   splitpos <- matrix(unlist(sapply(snps, strsplit, split=":")), ncol=2, byrow=TRUE)
-  splitpos <- cbind(snps, splitpos)
-  chromosomes <- unique(splitpos[,2])
+  splitpos <- cbind(snp_name, splitpos)
+  chromosomes <- unique(splitpos[,3])
   for(chr in chromosomes){
     if(chatty) 
       print(paste("working on chromosome", chr))
-    positions <- splitpos[which(splitpos[,2] == chr), 1]
-    res2 <- Find_position_gigs_single_chromo(positions, chr)
-    res <- rbind(res, res2)
+    noGenesonChromo <- unique(splitpos[which(splitpos[,3] == chr), 2])
+    for(numberGenes in noGenesonChromo){
+      rowsforgene <- which(splitpos[,2] == numberGenes)
+      positions <- splitpos[rowsforgene, 1]
+      res2 <- Find_position_gigs_single_chromo(positions, chr)
+      res2[,2] <- rep(numberGenes, dim(res2)[1])
+      print(res2)
+      res <- rbind(res, res2)
+    }
   }
   #res <- res[match(snps, res[,3]),]  #return in original order...broken
-  if(class(snp_name) == "snps_in_gene_regions")
-    res[,2] <- snp_name[,2]
   class(res) <- "snp_location_info"
   return(res)
 }
 # gigs_positions <- FindSNPpositions_gigs(snp_name)
-
+# FindSNPpositions_gigs(snp_name)->l
+#  l[which(l[,2] == "TINF2"),]
+# FindSNPpositions_gigs(chr14)
 
 CreateDosageDataFromGigs <- function(gigs_positions, chatty=TRUE){
   nochromos <- unique(gigs_positions[,4])
@@ -574,6 +580,7 @@ CreateDosageDataFromGigs <- function(gigs_positions, chatty=TRUE){
   colnames(ddall) <- c("study", "batch", "netcdf_ID", unique(gigs_positions[,3]))
   probs <- NULL
   probsnamevector <- NULL
+  times <- NULL
   for(i in nochromos){
     sub_gigs_positions <- gigs_positions[which(gigs_positions[,4] == i),]  
     if(class(sub_gigs_positions) == "character"){
@@ -587,9 +594,10 @@ CreateDosageDataFromGigs <- function(gigs_positions, chatty=TRUE){
     if(chatty)
       print(paste0("working on ", i, "which has ", length(sub_gigs_positions[,5]), "snps"))
     for(snpi in sub_gigs_positions[,5]){
+      starttime <- proc.time()[[3]]
       ind <- ind + 1
       if(chatty)
-        cat(i)
+        cat(paste(ind), " ")
       lo <- as.numeric(sub_gigs_positions[,5][ind])
       if(ncvar_get(nc, "SNP_Name", start=c(1, lo), count=c(-1,1)) == sub_gigs_positions[ind,3]){  #here to check that rs number matches correctly
         dosage <- 2*ncvar_get(nc, "Prob_AA", start=c(lo,1), count=c(1, -1)) + ncvar_get(nc, "Prob_AB", start=c(lo,1), count=c(1,-1))
@@ -598,9 +606,11 @@ CreateDosageDataFromGigs <- function(gigs_positions, chatty=TRUE){
       }
       res <- cbind(study, batch, samples, probs)
       colnames(res) <- c("study", "batch", "netcdf_ID", probsnamevector)
+      endtime <- proc.time()[[3]] - starttime
+      times <- c(times, endtime)
     }
   }
-  return(res)
+  return(list(res=res, times=times))
 }
 
 
