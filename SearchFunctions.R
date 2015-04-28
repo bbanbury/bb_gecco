@@ -561,7 +561,7 @@ FindSNPpositions_gigs <- function(snp_name, chatty=TRUE){
       positions <- splitpos[rowsforgene, 1]
       res2 <- Find_position_gigs_single_chromo(positions, chr)
       res2[,2] <- rep(numberGenes, dim(res2)[1])
-      print(res2)
+      # print(res2)
       res <- rbind(res, res2)
     }
   }
