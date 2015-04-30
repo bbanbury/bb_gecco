@@ -212,6 +212,8 @@ Use_snp_finder.py <- function(gene, upstream=0, downstream=0, snp_list="gigs", b
       print(paste("working on", g))
     path <- DataLocation("software")
     com <- paste0(path, "bin/snp_finder.py --db ", path, "snp.db --gene ", g, " -u ", upstream, " -d ", downstream, " -b ", buildver, " --snp_list ", snp_list)
+    if(include_ncrna)
+      com <- paste0(com, " --include_ncrna")
     if(report.call)
       print(com)
     snps <- system(com, intern=TRUE)
@@ -544,21 +546,26 @@ Find_position_gigs_single_chromo <- function(position, chromosome){
 
 FindSNPpositions_gigs <- function(snp_name, chatty=TRUE){
 # snp_name can either be a vector of positions (ie, 1:234) or in the class "snps_in_gene_regions"
+  if(class(snp_name) == "character"){
+    snp_name <- cbind(snp_name, rep("Not given", length(snp_name)))
+    snps <- snp_name
+  }
   res <- NULL
   if(class(snp_name) == "snps_in_gene_regions" | class(snp_name) == "matrix")
     snps <- snp_name[,1]
-  else
-    snps <- snp_name
   splitpos <- matrix(unlist(sapply(snps, strsplit, split=":")), ncol=2, byrow=TRUE)
   splitpos <- cbind(snp_name, splitpos)
   chromosomes <- unique(splitpos[,3])
   for(chr in chromosomes){
     if(chatty) 
       print(paste("working on chromosome", chr))
-    noGenesonChromo <- unique(splitpos[which(splitpos[,3] == chr), 2])
+    sub_splitpos <- splitpos[which(splitpos[,3] == chr),]
+    if(class(sub_splitpos) == "character")
+      sub_splitpos <- matrix(sub_splitpos, nrow=1)
+    noGenesonChromo <- unique(sub_splitpos[which(sub_splitpos[,3] == chr), 2])
     for(numberGenes in noGenesonChromo){
-      rowsforgene <- which(splitpos[,2] == numberGenes)
-      positions <- splitpos[rowsforgene, 1]
+      rowsforgene <- which(sub_splitpos[,2] == numberGenes)
+      positions <- sub_splitpos[rowsforgene, 1]
       res2 <- Find_position_gigs_single_chromo(positions, chr)
       res2[,2] <- rep(numberGenes, dim(res2)[1])
       # print(res2)
@@ -574,7 +581,7 @@ FindSNPpositions_gigs <- function(snp_name, chatty=TRUE){
 #  l[which(l[,2] == "TINF2"),]
 # FindSNPpositions_gigs(chr14)
 
-CreateDosageDataFromGigs <- function(gigs_positions, chatty=TRUE){
+CreateDosageDataFromGigs <- function(gigs_positions, chatty=TRUE, times=FALSE){
   nochromos <- unique(gigs_positions[,4])
   ddall <- data.frame(matrix(nrow=0, ncol=length(unique(gigs_positions[,3]))+3))
   colnames(ddall) <- c("study", "batch", "netcdf_ID", unique(gigs_positions[,3]))
@@ -610,7 +617,9 @@ CreateDosageDataFromGigs <- function(gigs_positions, chatty=TRUE){
       times <- c(times, endtime)
     }
   }
-  return(list(res=res, times=times))
+  if(times)
+   return(list(res=res, times=times))
+  return(res)
 }
 
 
