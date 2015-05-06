@@ -52,6 +52,7 @@ DataLocation <- function(whichData){
   #results
   if(whichData == "hapmap_marginal")  return(MakePathtoPeters_U("Results_Database/Version 4/Results - Meta of Marginal/gecco_version3_SNPinfo_23studies.Rdata", "cs"))
   if(whichData == "gigsv1_marginal")  return(MakePathtoPeters_U("Results_Database/GIGS_V1/Marginal/*Rdata", "cs"))
+  if(whichData == "gigsv2_marginal")  return(MakePathtoPeters_U("Results_Database/GIGS_V2/Marginal/*Rdata", "cs"))
   else stop("Can Not Find Data")
 }
 
@@ -304,6 +305,17 @@ GetLastFileNameInPath <- function(fileWithPath){
 }
 
 
+#' Change Alleles from Numeric to Letters
+#'
+#' Change Allele Coding from 1,2,3,4 to A,C,T,G
+#'
+#' This function changes numeric allele designation to letters
+#'
+#' @param num A number 1:4
+#' @export
+#' @seealso \link{MakePriorityPrunerInputFile} 
+#' @examples
+#' ChangeAlleles("1")
 ChangeAlleles <- function(num){
   num <- as.numeric(num)
   if(num == 1)  return("A")
@@ -314,60 +326,116 @@ ChangeAlleles <- function(num){
 }
 
 
-MakePriorityPrunerInputFile <- function(rs_numbers, pvals="gigsv1_marginal"){
-# snplist <- read.csv(MakePathtoPeters_U('GECCO_Working/Floraworking/Shared_results/3003_snplist.csv'), stringsAsFactor=F)[,1]
-# pvals needs to come from somewhere, right now, I have tit working just from gigsv1
-# forceSelect - Flag indicating if the SNP should be selected (kept) regardless of its LD with other selected SNPs or other filtering criteria specified, such as MAF or design score (1=true, 0=false).
-# designScore - Design score of the SNP (any positive real number). Can be filled in with a constant value (e.g., 1) if unknown.
-  if(pvals == "gigsv1_marginal"){
-    if(any(grep("rs", snplist))){
-      gigsposition <- find_rs_to_gigs(snplist[grep("rs", snplist)])
-      if(any(is.na(gigsposition))){
-        gigsposition <- gigsposition[-which(is.na(gigsposition), arr.ind=TRUE)[,1], ]
-      }
-    }
-    splitpos <- matrix(unlist(sapply(gigsposition[,2], strsplit, split=":")), ncol=2, byrow=TRUE)
-    res <- cbind(gigsposition, splitpos)
-    res2 <- MakeSNPDetailsTable_GIGS(res[,2], chatty=FALSE)
-    res3 <- merge(res, res2, by.x="gigs_number", by.y="SNP_Name")[,c(1,2,3,4,5,6)] 
-    colnames(res3) <- c("SNP_Name", "chr", "pos", "a1", "a2")
-    res3$a1 <- sapply(res3$a1, ChangeAlleles)
-    res3$a2 <- sapply(res3$a2, ChangeAlleles)
-    
-
+#' deFactorize
+#'
+#' Auto Remove the factoring
+#'
+#' This function changes any factor class to character
+#'
+#' @param table Any table (class data.frame or matrix)
+#' @export
+deFactorize <- function(table){
+  for(i in sequence(dim(table)[2])){
+    if(is.factor(table[,i]))
+      table[,i] <- as.character(table[,i])
   }
-
+  return(table)
 }
 
 
+#' MakeSplitPos
+#'
+#' Internal function for splitting a snp name in gigs to its position information
+#'
+#' Changes snp names from 1:123 to a data frame with name, chromosome, and position data
+#'
+#' @param gigs_numbers SNP names (ex, 1:132423)
+#' @export
+#' @seealso \link{GetMarginal} 
+#' @examples
+#' ChangeAlleles("1")
 MakeSplitPos <- function(gigs_numbers){
 # vector or single gigs_number (ex, 1:234)
+  if(any(is.na(gigs_numbers)))
+    gigs_numbers <- gigs_numbers[-which(is.na(gigs_numbers))]
   gigs_numbers <- as.character(gigs_numbers)
   splitpos <- matrix(unlist(sapply(gigs_numbers, strsplit, split=":")), ncol=2, byrow=TRUE)
   splitpos <- cbind(gigs_numbers, splitpos)
   colnames(splitpos) <- c("SNP_Name", "chr", "pos")
-  return(splitpos)
+  return(deFactorize(splitpos))
 }
 
-GetMarginal <- function(snps, datasource="gigsv1", chatty=TRUE){
+
+#' Make PriorityPruner Input File
+#'
+#' Auto create an input file for the program PriorityPruner from a vector of snp names
+#'
+#' This function returns a table with the required columns for the program PriorityPruner. These include: snp_name, chr, pos, a1, a2, P, forceSelect, and designScore.
+#'
+#' @param snplist A SNP name, either rs number or chr:pos (ex, "rs1234" or "1:1234")
+#' @param pvals Where to draw pvalues (or other values between 0 and 1). PriorityPruner will use these as a prioritization metric. This is used for prioritizing the selection of SNPs, where lower numbers are prioritized.
+#' @param forceSelect For now, this doesn't really work other than to assign all values the same 0 status. Flag indicating if the SNP should be selected (kept) regardless of its LD with other selected SNPs or other filtering criteria specified, such as MAF or design score (1=true, 0=false).
+#' @param designScore For now, this doesn't really work other than to assign all values the same 1 status. Flag indicating if the SNP should be selected (kept) regardless of its LD with other selected SNPs or other filtering criteria specified, such as MAF or design score (1=true, 0=false).
+#' @param chatty Option to print progress to screen
+#' @export
+#' @seealso \link{MakeSNPDetailsTable_GIGS} \link{GetMarginal} 
+#' @examples
+#' MakePriorityPrunerInputFile(c("rs3181096", "rs3863057", "rs6666554"))
+MakePriorityPrunerInputFile <- function(snplist, pvals="gigsv2", forceSelect=NULL, designScore=NULL, chatty=TRUE){
+  if(pvals != "gigsv1" & pvals != "gigsv2") #could use any pvals really, not just out of marginal
+    stop("need to add more than gigs pvals")
+  if(pvals == "gigsv1" | pvals == "gigsv2"){
+    gigsposition <- snplist
+    if(any(grep("rs", snplist)))
+      gigsposition <- find_rs_to_gigs(snplist[grep("rs", snplist)], chatty)
+    if(class(gigsposition) == "character")
+      gigsposition <- cbind(gigsposition, gigsposition)
+    if(any(is.na(gigsposition)))
+        gigsposition <- gigsposition[-which(is.na(gigsposition), arr.ind=TRUE)[,1],]
+    splitpos <- MakeSplitPos(gigsposition[,2])
+    res <- cbind(gigsposition[,1], splitpos)
+    res2 <- MakeSNPDetailsTable_GIGS(res[,2], chatty)
+    res3 <- deFactorize(merge(res, res2, by="SNP_Name")[,c(1,2,3,4,5,6)]) 
+    colnames(res3) <- c("gigs_position", "SNP_Name", "chr", "pos", "a1", "a2")
+    res3$a1 <- sapply(res3$a1, ChangeAlleles)
+    res3$a2 <- sapply(res3$a2, ChangeAlleles)
+    margs <- GetMarginal(res3$gigs_position, pvals, chatty=chatty)[,c(1,5)]
+    res4 <- deFactorize(merge(res3, margs, by.x="gigs_position", by.y="SNP_Name"))
+  }
+  if(is.null(forceSelect))
+    forceSelect <- rep(0, dim(res4)[1]) # these will need else statements if someone passes a mismatched vector. 
+  if(is.null(designScore))
+    designScore <- rep(1, dim(res4)[1])
+  return(data.frame(res4[,-1], forceSelect=forceSelect, designScore=designScore, stringsAsFactors=FALSE))
+}
+# snplist <- read.csv(MakePathtoPeters_U('GECCO_Working/Floraworking/Shared_results/3003_snplist.csv'), stringsAsFactor=F)[,1]
+
+
+GetMarginal <- function(snps, datasource="gigsv2", chatty=TRUE){
 # snps should be a vector of gigs locations/names (ex: c("1:123", "2:134"))
   snps <- MakeSplitPos(snps)
   res <- NULL
-  if(datasource == "gigsv1"){
+  if(datasource == "gigsv1")
     files <- DataLocation("gigsv1_marginal")
-    files <- system(paste("ls ", files), intern=TRUE)
-    filesnames <- sapply(files, GetChromo, USE.NAMES=FALSE)
-    files <- files[which(filesnames %in% unique(snps[,2]))]
-    for(i in files){
-      if(chatty)
-        print(paste("Working on", GetLastFileNameInPath(i)))
-      load(i)
-      sub_snps <- snps[which(snps[,2] == GetChromo(i)),1]
-      marg <- t(res.chr[,which(colnames(res.chr) %in% sub_snps)])
-      res <- rbind(res, marg)
+  if(datasource == "gigsv2")
+    files <- DataLocation("gigsv2_marginal")
+  files <- system(paste("ls ", files), intern=TRUE)
+  filesnames <- sapply(files, GetChromo, USE.NAMES=FALSE)
+  files <- files[which(filesnames %in% unique(snps[,2]))]
+  for(i in files){
+    if(chatty)
+      print(paste("Working on", GetLastFileNameInPath(i)))
+    load(i)
+    sub_snps <- snps[which(snps[,2] == GetChromo(i)),1]
+    marg <- t(res.chr[,which(colnames(res.chr) %in% sub_snps)])[,1:4]
+    if(class(marg) == "numeric" | class(marg) == "character"){
+      marg <- matrix(marg, nrow=1)
+      rownames(marg) <- sub_snps[[1]]
     }
-    colnames(res) <- c("Estimate", "Std. Error", "z value", "Pr(>|z|)")
+    res <- rbind(res, cbind(rownames(marg), marg))
   }
+  rownames(res) <- NULL
+  colnames(res) <- c("SNP_Name", "Estimate", "Std. Error", "z value", "Pr(>|z|)")
   return(res)
 }
 
@@ -630,6 +698,8 @@ Find_position_gigs_single_chromo <- function(position, chromosome){
 
 FindSNPpositions_gigs <- function(snp_name, chatty=TRUE){
 # snp_name can either be a vector of positions (ie, 1:234) or in the class "snps_in_gene_regions"
+  if(length(grep("rs", snp_name)) > 0)
+    stop("you are trying to find rs numbers in gigs")
   if(class(snp_name) == "character"){
     snp_name <- cbind(snp_name, rep("Not given", length(snp_name)))
     snps <- snp_name
@@ -637,18 +707,18 @@ FindSNPpositions_gigs <- function(snp_name, chatty=TRUE){
   res <- NULL
   if(class(snp_name) == "snps_in_gene_regions" | class(snp_name) == "matrix")
     snps <- snp_name[,1]
-  splitpos <- matrix(unlist(sapply(snps, strsplit, split=":")), ncol=2, byrow=TRUE)
-  splitpos <- cbind(snp_name, splitpos)
-  chromosomes <- unique(splitpos[,3])
+  splitpos <- MakeSplitPos(snps)
+  splitpos <- cbind(splitpos, snp_name[,2])
+  chromosomes <- unique(splitpos[,2])
   for(chr in chromosomes){
     if(chatty) 
       print(paste("working on chromosome", chr))
-    sub_splitpos <- splitpos[which(splitpos[,3] == chr),]
+    sub_splitpos <- splitpos[which(splitpos[,2] == chr),]
     if(class(sub_splitpos) == "character")
       sub_splitpos <- matrix(sub_splitpos, nrow=1)
-    noGenesonChromo <- unique(sub_splitpos[which(sub_splitpos[,3] == chr), 2])
+    noGenesonChromo <- unique(sub_splitpos[which(sub_splitpos[,2] == chr), 4])
     for(numberGenes in noGenesonChromo){
-      rowsforgene <- which(sub_splitpos[,2] == numberGenes)
+      rowsforgene <- which(sub_splitpos[,4] == numberGenes)
       positions <- sub_splitpos[rowsforgene, 1]
       res2 <- Find_position_gigs_single_chromo(positions, chr)
       res2[,2] <- rep(numberGenes, dim(res2)[1])
@@ -664,6 +734,7 @@ FindSNPpositions_gigs <- function(snp_name, chatty=TRUE){
 # FindSNPpositions_gigs(snp_name)->l
 #  l[which(l[,2] == "TINF2"),]
 # FindSNPpositions_gigs(chr14)
+
 
 CreateDosageDataFromGigs <- function(gigs_positions, chatty=TRUE, times=FALSE){
   nochromos <- unique(gigs_positions[,4])
@@ -721,10 +792,13 @@ MakeSNPDetailsTable_GIGS <- function(snps, chatty=TRUE){
       print(paste("working on", i))
     chr <- GetChromo(i)
     sub_snps <- snps[which(snps[,6] == chr),]
+    if(class(sub_snps) == "character")
+      sub_snps <- matrix(sub_snps, nrow=1)
     tmp <- read.csv(i)
-    res <- rbind(res, tmp[which(tmp[,1] %in% sub_snps[,3]),])
+    dd <- tmp[which(tmp[,1] %in% sub_snps[,3]),]
+    res <- rbind(res, dd)
   }
-  # returning factors...change this
+  res <- deFactorize(res)
   return(res)
 }
 
