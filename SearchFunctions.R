@@ -49,6 +49,9 @@ DataLocation <- function(whichData){
   if(whichData == "separate-isacc")  return(MakePathtoNewcomb_P("/Molecular Correlates_ISACC/Survival data harmonization/Harmonized data/", "cs"))
   #software or other
   if(whichData == "software")  return(MakePathtoPeters_U("/PetersGrp/GECCO_Software/"))
+  #results
+  if(whichData == "hapmap_marginal")  return(MakePathtoPeters_U("Results_Database/Version 4/Results - Meta of Marginal/gecco_version3_SNPinfo_23studies.Rdata", "cs"))
+  if(whichData == "gigsv1_marginal")  return(MakePathtoPeters_U("Results_Database/GIGS_V1/Marginal/*Rdata", "cs"))
   else stop("Can Not Find Data")
 }
 
@@ -246,7 +249,8 @@ Use_snp_finder.py <- function(gene, upstream=0, downstream=0, snp_list="gigs", b
 #' GetChromo("101ccfr_usc2_merged_dosage_5.nc")
 GetChromo <- function(ncdfFileName){
   ncdfFileName  <- GetLastFileNameInPath(ncdfFileName)
-  return(strsplit(ncdfFileName, "[_.]")[[1]][length(strsplit(ncdfFileName, "[_.]")[[1]]) - 1])
+  dd <- strsplit(ncdfFileName, "[_.]")[[1]][length(strsplit(ncdfFileName, "[_.]")[[1]]) - 1]
+  return(gsub("\\D+", "", dd))
 }
 
 
@@ -300,12 +304,92 @@ GetLastFileNameInPath <- function(fileWithPath){
 }
 
 
+ChangeAlleles <- function(num){
+  num <- as.numeric(num)
+  if(num == 1)  return("A")
+  if(num == 2)  return("C")
+  if(num == 3)  return("G")
+  if(num == 4)  return("T")
+  else return("NA")
+}
+
+
+MakePriorityPrunerInputFile <- function(rs_numbers, pvals="gigsv1_marginal"){
+# snplist <- read.csv(MakePathtoPeters_U('GECCO_Working/Floraworking/Shared_results/3003_snplist.csv'), stringsAsFactor=F)[,1]
+# pvals needs to come from somewhere, right now, I have tit working just from gigsv1
+# forceSelect - Flag indicating if the SNP should be selected (kept) regardless of its LD with other selected SNPs or other filtering criteria specified, such as MAF or design score (1=true, 0=false).
+# designScore - Design score of the SNP (any positive real number). Can be filled in with a constant value (e.g., 1) if unknown.
+  if(pvals == "gigsv1_marginal"){
+    if(any(grep("rs", snplist))){
+      gigsposition <- find_rs_to_gigs(snplist[grep("rs", snplist)])
+      if(any(is.na(gigsposition))){
+        gigsposition <- gigsposition[-which(is.na(gigsposition), arr.ind=TRUE)[,1], ]
+      }
+    }
+    splitpos <- matrix(unlist(sapply(gigsposition[,2], strsplit, split=":")), ncol=2, byrow=TRUE)
+    res <- cbind(gigsposition, splitpos)
+    res2 <- MakeSNPDetailsTable_GIGS(res[,2], chatty=FALSE)
+    res3 <- merge(res, res2, by.x="gigs_number", by.y="SNP_Name")[,c(1,2,3,4,5,6)] 
+    colnames(res3) <- c("SNP_Name", "chr", "pos", "a1", "a2")
+    res3$a1 <- sapply(res3$a1, ChangeAlleles)
+    res3$a2 <- sapply(res3$a2, ChangeAlleles)
+    
+
+  }
+
+}
+
+
+MakeSplitPos <- function(gigs_numbers){
+# vector or single gigs_number (ex, 1:234)
+  gigs_numbers <- as.character(gigs_numbers)
+  splitpos <- matrix(unlist(sapply(gigs_numbers, strsplit, split=":")), ncol=2, byrow=TRUE)
+  splitpos <- cbind(gigs_numbers, splitpos)
+  colnames(splitpos) <- c("SNP_Name", "chr", "pos")
+  return(splitpos)
+}
+
+GetMarginal <- function(snps, datasource="gigsv1", chatty=TRUE){
+# snps should be a vector of gigs locations/names (ex: c("1:123", "2:134"))
+  snps <- MakeSplitPos(snps)
+  res <- NULL
+  if(datasource == "gigsv1"){
+    files <- DataLocation("gigsv1_marginal")
+    files <- system(paste("ls ", files), intern=TRUE)
+    filesnames <- sapply(files, GetChromo, USE.NAMES=FALSE)
+    files <- files[which(filesnames %in% unique(snps[,2]))]
+    for(i in files){
+      if(chatty)
+        print(paste("Working on", GetLastFileNameInPath(i)))
+      load(i)
+      sub_snps <- snps[which(snps[,2] == GetChromo(i)),1]
+      marg <- t(res.chr[,which(colnames(res.chr) %in% sub_snps)])
+      res <- rbind(res, marg)
+    }
+    colnames(res) <- c("Estimate", "Std. Error", "z value", "Pr(>|z|)")
+  }
+  return(res)
+}
+
+
 
 ##  ---------------------------------  ##
 ##                                     ##
 ##           Hapmap Functions          ##
 ##                                     ##
 ##  ---------------------------------  ##
+
+
+# rs <- c("rs2736100", "rs401681", "rs10069690", "rs4635969",  "rs2853676", "rs2853677", "rs2242652", "rs402710",  "rs17246404", "rs10936601", "rs1317082", "rs12696304", "rs10936599")
+# RSAcross <- FindSNPposition_hapmap(rs, studies, directory=MakePathtoPeters_U(names.root))
+# snpDosage <- CreateDosageDataAcrossStudies(RSAcross, hapmap.data)
+# save(snpDosage, file=paste(barb.working, "snpDosage.Rdata"))
+
+#Create SNP details table (mostly useful when specific RS numbers are requested)
+# d <- CreateSNPDetailsTable(rs, studies, directory=barb.hapmap)
+# write.table(d, file=paste0(barb.working, "SNP_details.csv"), quote=FALSE, sep=" & ")
+# write.table(d, file=paste0("SNP_details.csv"), quote=FALSE, sep=",")
+
 
 
 find_rs_hapmap <- function(rs_number, snp_names){
@@ -640,6 +724,7 @@ MakeSNPDetailsTable_GIGS <- function(snps, chatty=TRUE){
     tmp <- read.csv(i)
     res <- rbind(res, tmp[which(tmp[,1] %in% sub_snps[,3]),])
   }
+  # returning factors...change this
   return(res)
 }
 
@@ -1126,9 +1211,31 @@ Yi_GetEpiDataFromGigs <- function(env){
 
 
 
+##  ---------------------------------  ##
+##                                     ##
+##                NOTES                ##
+##                                     ##
+##  ---------------------------------  ##
 
 
+# NOTES from sitting with Flora:
+# snp data with R2 allele freqs imputation status
+# helps create hap map data table
+# count allele and baseline are in the legend file
+# load('/Volumes/researcher/Peters_U/Results_Database/Version 4/Results - Meta of Marginal/gecco_version3_SNPinfo_23studies.Rdata')
+# CAF.Matrix has count allele
+# Imputed.matrix is for imputation (1), genotyped (0), error (NA)
+# R2.matrix if imputed==1, then R2 gets calced.  If only genotyped data, then it will automatically be 1, but you might want to ignore (because it will inflate mean)
 
+
+# marginal analysis for each snp is here:
+#load('/Volumes/researcher/Peters_U/Results_Database/Version 4/Results - Meta of Marginal/gecco_marginal_version4_23studies.Rdata')
+
+
+# epi data
+# /Volumes/researcher/Peters_U/Data Harmonization/Post-harmonization/Data
+# files that end in 0' don't touch
+# files that end in 'e' exome chip
 
 
 
