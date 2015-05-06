@@ -49,6 +49,11 @@ DataLocation <- function(whichData){
   if(whichData == "separate-isacc")  return(MakePathtoNewcomb_P("/Molecular Correlates_ISACC/Survival data harmonization/Harmonized data/", "cs"))
   #software or other
   if(whichData == "software")  return(MakePathtoPeters_U("/PetersGrp/GECCO_Software/"))
+  if(whichData == "PriorityPruner")  return(MakePathtoPeters_U("/PetersGrp/GECCO_Software/bin/PriorityPruner.jar"))
+  if(whichData == "wgs_tfam")  return(MakePathtoPeters_U("/GECCO_Working/chuckworking/wgs/ld_data/whi-wgs_snps_unfiltered/whi_wgs.tfam"))
+  if(whichData == "wgs_tped")  return(MakePathtoPeters_U("/GECCO_Working/chuckworking/wgs/ld_data/whi-wgs_snps_unfiltered/"))
+  if(whichData == "1kgp_tfam")  return(MakePathtoPeters_U("/GECCO_Working/chuckworking/1kgp/1kgp_phase1v3_founder.tfam"))
+  if(whichData == "1kgp_tped")  return(MakePathtoPeters_U("/GECCO_Working/chuckworking/1kgp/"))
   #results
   if(whichData == "hapmap_marginal")  return(MakePathtoPeters_U("Results_Database/Version 4/Results - Meta of Marginal/gecco_version3_SNPinfo_23studies.Rdata", "cs"))
   if(whichData == "gigsv1_marginal")  return(MakePathtoPeters_U("Results_Database/GIGS_V1/Marginal/*Rdata", "cs"))
@@ -366,6 +371,47 @@ MakeSplitPos <- function(gigs_numbers){
 }
 
 
+#' GetMarginal Results
+#'
+#' Get Marginal Analysis results
+#'
+#' Returns a table of results, with snp as rows
+#'
+#' @param snps A gigs SNP name, chr:pos (ex, "1:1234")
+#' @param datasource Either "gigsv1" or "gigsv2" for now, can add hapmap later
+#' @param chatty Option to print progress to screen
+#' @export
+#' @seealso \link{MakePriorityPrunerInputFile} 
+#' @examples
+#' GetMarginal(c("2:204570092", "3:30680370", "1:169602109"))
+GetMarginal <- function(snps, datasource="gigsv2", chatty=TRUE){
+  snps <- MakeSplitPos(snps)
+  res <- NULL
+  if(datasource == "gigsv1")
+    files <- DataLocation("gigsv1_marginal")
+  if(datasource == "gigsv2")
+    files <- DataLocation("gigsv2_marginal")
+  files <- system(paste("ls ", files), intern=TRUE)
+  filesnames <- sapply(files, GetChromo, USE.NAMES=FALSE)
+  files <- files[which(filesnames %in% unique(snps[,2]))]
+  for(i in files){
+    if(chatty)
+      print(paste("Working on", GetLastFileNameInPath(i)))
+    load(i)
+    sub_snps <- snps[which(snps[,2] == GetChromo(i)),1]
+    marg <- t(res.chr[,which(colnames(res.chr) %in% sub_snps)])[,1:4]
+    if(class(marg) == "numeric" | class(marg) == "character"){
+      marg <- matrix(marg, nrow=1)
+      rownames(marg) <- sub_snps[[1]]
+    }
+    res <- rbind(res, cbind(rownames(marg), marg))
+  }
+  rownames(res) <- NULL
+  colnames(res) <- c("SNP_Name", "Estimate", "Std. Error", "z value", "p")
+  return(res)
+}
+
+
 #' Make PriorityPruner Input File
 #'
 #' Auto create an input file for the program PriorityPruner from a vector of snp names
@@ -396,7 +442,7 @@ MakePriorityPrunerInputFile <- function(snplist, pvals="gigsv2", forceSelect=NUL
     res <- cbind(gigsposition[,1], splitpos)
     res2 <- MakeSNPDetailsTable_GIGS(res[,2], chatty)
     res3 <- deFactorize(merge(res, res2, by="SNP_Name")[,c(1,2,3,4,5,6)]) 
-    colnames(res3) <- c("gigs_position", "SNP_Name", "chr", "pos", "a1", "a2")
+    colnames(res3) <- c("gigs_position", "name", "chr", "pos", "a1", "a2")
     res3$a1 <- sapply(res3$a1, ChangeAlleles)
     res3$a2 <- sapply(res3$a2, ChangeAlleles)
     margs <- GetMarginal(res3$gigs_position, pvals, chatty=chatty)[,c(1,5)]
@@ -411,34 +457,19 @@ MakePriorityPrunerInputFile <- function(snplist, pvals="gigsv2", forceSelect=NUL
 # snplist <- read.csv(MakePathtoPeters_U('GECCO_Working/Floraworking/Shared_results/3003_snplist.csv'), stringsAsFactor=F)[,1]
 
 
-GetMarginal <- function(snps, datasource="gigsv2", chatty=TRUE){
-# snps should be a vector of gigs locations/names (ex: c("1:123", "2:134"))
-  snps <- MakeSplitPos(snps)
-  res <- NULL
-  if(datasource == "gigsv1")
-    files <- DataLocation("gigsv1_marginal")
-  if(datasource == "gigsv2")
-    files <- DataLocation("gigsv2_marginal")
-  files <- system(paste("ls ", files), intern=TRUE)
-  filesnames <- sapply(files, GetChromo, USE.NAMES=FALSE)
-  files <- files[which(filesnames %in% unique(snps[,2]))]
-  for(i in files){
-    if(chatty)
-      print(paste("Working on", GetLastFileNameInPath(i)))
-    load(i)
-    sub_snps <- snps[which(snps[,2] == GetChromo(i)),1]
-    marg <- t(res.chr[,which(colnames(res.chr) %in% sub_snps)])[,1:4]
-    if(class(marg) == "numeric" | class(marg) == "character"){
-      marg <- matrix(marg, nrow=1)
-      rownames(marg) <- sub_snps[[1]]
-    }
-    res <- rbind(res, cbind(rownames(marg), marg))
+Run_PriorityPruner <- function(snplist, filename="ld_pruner", datasource="gigsv2", r2=0.5){
+# datasource can be gigsv2 or 1kgp only as of now
+# r2 is some fixed LD r2 cutoff (number)
+  w <- MakePriorityPrunerInputFile(snplist)
+  write.table(w, file=paste(filename, ".input"), sep=" ", quote=FALSE, row.names=FALSE)
+  call <- paste("java -Xms256m -Xmx2048m -jar", DataLocation("PriorityPruner"))
+  if(datasource == "gigsv2"){
+    call2 <- paste("--tfam", DataLocation("wgs_tfam"), "--tped", DataLocation("wgs_tped"))
   }
-  rownames(res) <- NULL
-  colnames(res) <- c("SNP_Name", "Estimate", "Std. Error", "z value", "Pr(>|z|)")
-  return(res)
-}
 
+# java -Xms256m -Xmx2048m -jar /shared/silo_researcher/Peters_U/PetersGrp/GECCO_Software/bin/PriorityPruner.jar --tfam /shared/silo_researcher/Peters_U/GECCO_Working/chuckworking/wgs/ld_data/whi-wgs_snps_unfiltered/whi_wgs.tfam --tped /home/cconnoll/chuckworking/wgs/ld_data/whi-wgs_snps_unfiltered/whi-wgsV2_chr1.tped --snp_table ld_prune_chr1.snp_file --r2 0.5 --out ./ld_prune_chr
+
+}
 
 
 ##  ---------------------------------  ##
@@ -460,9 +491,20 @@ GetMarginal <- function(snps, datasource="gigsv2", chatty=TRUE){
 
 
 
+#' Find RS Numbers from HapMap
+#'
+#' Find RS numbers from HapMap study-specific dataset
+#'
+#' Returns table with study, batch, rs_number, ncdf file, and the position
+#'
+#' @param rs_number Vector or single SNP name
+#' @param snp_names Which hapmap study file you want to use, these are found in the directory DataLocation("hapmap_snp_names"). 
+#' @export
+#' @seealso \link{FindSNPposition_hapmap} 
+#' @examples
+#' load(paste0(DataLocation("hapmap_snp_names"), "snp_names_101ccfr_usc.Rdata"))
+#' find_rs_hapmap(c("rs2736100", "rs401681", "rs10069690"), snp_names)
 find_rs_hapmap <- function(rs_number, snp_names){
-# snp_names_file should be an Rdata file in the class snp_names with a list of names 
-# could make this an executable
   if(class(snp_names) != "snp_names")
     stop("looking for an snp names file")
   if(any(rs_number %in% unlist(snp_names))){
@@ -481,14 +523,23 @@ find_rs_hapmap <- function(rs_number, snp_names){
   colnames(locs) <- c("study", "batch", "rs_num", "ncdf file", "position")
   return(locs)
 }
-# find_rs_hapmap(c("rs2286139", "rs11127519"), snp_names)  #works with knowns
 
 
+#' Find RS Numbers from HapMap
+#'
+#' Find RS numbers from HapMap accross various studies
+#'
+#' Returns table in the class "snp_location_info", with study, batch, rs_number, ncdf file, and the position. The special class makes it so that it does not print all results to the screen unless you explicitly want to.  Use [] to display the whole table. 
+#'
+#' @param rs_number Vector or single SNP name
+#' @param studies Which hapmap study files you want to include, these are found in the directory DataLocation("hapmap_snp_names"). If NULL, it will include all. 
+#' @param chatty Option to print progress to screen
+#' @export
+#' @seealso \link{find_rs_hapmap} 
+#' @examples
+#' FindSNPposition_hapmap(c("rs2736100", "rs401681", "rs10069690"), studies="101ccfr")
+#' FindSNPposition_hapmap(c("rs2736100", "rs401681", "rs10069690"))
 FindSNPposition_hapmap <- function(rs_number, studies=NULL, chatty=TRUE){
-# for a vector of rs_numbers 
-# for a vector of c(studies)
-# create rs_positions table (and also rbind these to save)
-# and then rbind results
   directory <- DataLocation("hapmap_snp_names")
   res <- NULL
   if(is.null(studies))
@@ -511,8 +562,6 @@ FindSNPposition_hapmap <- function(rs_number, studies=NULL, chatty=TRUE){
   class(res) <- "snp_location_info"
   return(res)
 }
-#RSAcross <- FindSNPposition_hapmap(rs, studies)
-#FindSNPposition_hapmap(c("rs11412"), studies, MakePathtoPeters_U(names.root))
 
 
 CreateDosageDataPerStudy <- function(rs_positions, directory=NULL){
