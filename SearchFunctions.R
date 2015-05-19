@@ -407,7 +407,7 @@ GetMarginal <- function(snps, datasource="gigsv2", chatty=TRUE){
     res <- rbind(res, cbind(rownames(marg), marg))
   }
   rownames(res) <- NULL
-  colnames(res) <- c("SNP_Name", "Estimate", "Std. Error", "z value", "p")
+  colnames(res) <- c("SNP_Name", "Estimate", "Std. Error", "p", "var")
   return(res)
 }
 
@@ -424,52 +424,104 @@ GetMarginal <- function(snps, datasource="gigsv2", chatty=TRUE){
 #' @param designScore For now, this doesn't really work other than to assign all values the same 1 status. Flag indicating if the SNP should be selected (kept) regardless of its LD with other selected SNPs or other filtering criteria specified, such as MAF or design score (1=true, 0=false).
 #' @param chatty Option to print progress to screen
 #' @export
-#' @seealso \link{MakeSNPDetailsTable_GIGS} \link{GetMarginal} 
+#' @seealso \link{MakeSNPDetailsTable_GIGS} \link{GetMarginal} \link{Run_PriorityPruner}
 #' @examples
 #' MakePriorityPrunerInputFile(c("rs3181096", "rs3863057", "rs6666554"))
-MakePriorityPrunerInputFile <- function(snplist, pvals="gigsv2", forceSelect=NULL, designScore=NULL, chatty=TRUE){
+MakePriorityPrunerInputFile <- function(snplist, pvals="gigsv2", forceSelect=NULL, designScore=NULL, chatty=TRUE, save.file=TRUE){
   if(pvals != "gigsv1" & pvals != "gigsv2") #could use any pvals really, not just out of marginal
     stop("need to add more than gigs pvals")
   if(pvals == "gigsv1" | pvals == "gigsv2"){
     gigsposition <- snplist
     if(any(grep("rs", snplist)))
-      gigsposition <- find_rs_to_gigs(snplist[grep("rs", snplist)], chatty)
+      gigsposition[grep("rs", snplist)] <- find_rs_to_gigs(snplist[grep("rs", snplist)], chatty)[,2]
+    if(any(grep("chr", snplist)))
+      gigsposition[grep("chr", snplist)] <- gsub("chr", "", gigsposition[grep("chr", snplist)])
     if(class(gigsposition) == "character")
-      gigsposition <- cbind(gigsposition, gigsposition)
+      gigsposition <- cbind(snplist, gigsposition)
     if(any(is.na(gigsposition)))
         gigsposition <- gigsposition[-which(is.na(gigsposition), arr.ind=TRUE)[,1],]
+    if(any(grep(":I|:D", gigsposition[,2])))
+      gigsposition[grep(":I|:D", gigsposition[,2]),2] <- gsub(":I|:D", "", gigsposition[grep(":I|:D", gigsposition[,2]),2])
     splitpos <- MakeSplitPos(gigsposition[,2])
     res <- cbind(gigsposition[,1], splitpos)
     res2 <- MakeSNPDetailsTable_GIGS(res[,2], chatty)
-    res3 <- deFactorize(merge(res, res2, by="SNP_Name")[,c(1,2,3,4,5,6)]) 
-    colnames(res3) <- c("gigs_position", "name", "chr", "pos", "a1", "a2")
+    res3 <- deFactorize(merge(res[,c(1,2,3,4)], res2[,c(1,2,3)], by="SNP_Name")) 
+    colnames(res3) <- c("name", "rs_name", "chr", "pos", "a1", "a2")
     res3$a1 <- sapply(res3$a1, ChangeAlleles)
     res3$a2 <- sapply(res3$a2, ChangeAlleles)
-    margs <- GetMarginal(res3$gigs_position, pvals, chatty=chatty)[,c(1,5)]
+    margs <- GetMarginal(res3$gigs_position, pvals, chatty=chatty)[,c(1,4)]
     res4 <- deFactorize(merge(res3, margs, by.x="gigs_position", by.y="SNP_Name"))
   }
   if(is.null(forceSelect))
     forceSelect <- rep(0, dim(res4)[1]) # these will need else statements if someone passes a mismatched vector. 
   if(is.null(designScore))
     designScore <- rep(1, dim(res4)[1])
-  return(data.frame(res4[,-1], forceSelect=forceSelect, designScore=designScore, stringsAsFactors=FALSE))
+  d <- data.frame(res4[,-2], forceSelect=forceSelect, designScore=designScore, stringsAsFactors=FALSE)
+  if(save.file)
+    write.table(sub_pp_in, file=paste0("snp_table_chr", i, ".txt"), row.names=FALSE, sep="", quote=FALSE)
+  return(d)
 }
 # snplist <- read.csv(MakePathtoPeters_U('GECCO_Working/Floraworking/Shared_results/3003_snplist.csv'), stringsAsFactor=F)[,1]
 
 
-Run_PriorityPruner <- function(snplist, filename="ld_pruner", datasource="gigsv2", r2=0.5){
-# datasource can be gigsv2 or 1kgp only as of now
-# r2 is some fixed LD r2 cutoff (number)
-  w <- MakePriorityPrunerInputFile(snplist)
-  write.table(w, file=paste(filename, ".input"), sep=" ", quote=FALSE, row.names=FALSE)
-  call <- paste("java -Xms256m -Xmx2048m -jar", DataLocation("PriorityPruner"))
+#' Run PriorityPruner On Gizmo
+#'
+#' Run PriorityPruner on Gizmo Cluster
+#'
+#' This function will batch PriorityPruner jobs to Gizmo cluster from a rhino node
+#'
+#' @param snp_table_file A snp_table file that was created either by hand or using the MakePriorityPrunerInputFile function
+#' @param datasource This is where we draw the tfam/tped files for PriorityPruner. At this point, it can either be gigsv2 or 1kgp data
+#' @param r2 numeric, Fixed LD R2 cut off from 0-1
+#' @param report.call Option to report the system call so you can run PriorityPruner program via terminal
+#' @export
+#' @seealso \link{MakePriorityPrunerInputFile} \link{Read_PriorityPruner_Results}
+#' @examples
+#' Run_PriorityPruner("snp_table_chr1")
+Run_PriorityPruner <- function(snp_table_file, datasource="gigsv2", r2=0.5, report.call=FALSE){
+  if(length(grep("rhino", system("hostname", intern=TRUE))) < 1)
+    stop("Must be on a rhino machine")
+  call <- paste0("java -Xms256m -Xmx2048m -jar ", DataLocation("PriorityPruner"))
   if(datasource == "gigsv2"){
-    call2 <- paste("--tfam", DataLocation("wgs_tfam"), "--tped", DataLocation("wgs_tped"))
+    all_files <- system(paste("ls", DataLocation("wgs_tped")), intern=TRUE)
+    tped_file <- all_files[grep(paste0("chr", gsub("\\D+", "", snp_table_file), ".tped"), all_files)]
+    call2 <- paste0(call, " --tfam ", DataLocation("wgs_tfam"), " --tped ", DataLocation("wgs_tped"), tped_file)
   }
-
-# java -Xms256m -Xmx2048m -jar /shared/silo_researcher/Peters_U/PetersGrp/GECCO_Software/bin/PriorityPruner.jar --tfam /shared/silo_researcher/Peters_U/GECCO_Working/chuckworking/wgs/ld_data/whi-wgs_snps_unfiltered/whi_wgs.tfam --tped /home/cconnoll/chuckworking/wgs/ld_data/whi-wgs_snps_unfiltered/whi-wgsV2_chr1.tped --snp_table ld_prune_chr1.snp_file --r2 0.5 --out ./ld_prune_chr
-
+  if(datasource == "1kgp"){
+    all_files <- system(paste("ls", DataLocation("1kgp_tped")), intern=TRUE)
+    tped_file <- all_files[grep(paste0("chr", gsub("\\D+", "", snp_table_file), ".tped"), all_files)]
+    call2 <- paste0(call, " --tfam ", DataLocation("1kgp_tfam"), " --tped ", DataLocation("1kgp_tped"), tped_file)
+  }
+  if(datasource != "gigsv2" & datasource != "1kgp")
+    stop("gotta be gigsv2 for now")
+  call3 <- paste0(call2, " --snp_table ", snp_table_file, " --r2 ", r2, " --out ld_prune_", gsub("\\D+", "", snp_table_file))
+  if(report.call)
+    cat(call3)
+  system(paste0("sbatch --wrap='", call3, "'"))
 }
+
+
+#' Retrieve PriorityPruner Results
+#'
+#' Read in results from PriorityPruner 
+#'
+#' This function will read in and combine all the results from a PriorityPruner analysis
+#'
+#' @param results_files A vector of *.results files that are output from PriorityPruner
+#' @export
+#' @seealso \link{MakePriorityPrunerInputFile} \link{Run_PriorityPruner}
+#' @examples
+#' Read_PriorityPruner_Results(list.files(pattern="\\.results"))
+Read_PriorityPruner_Results <- function(results_files){
+  res <- NULL
+  for(i in results_files){
+    res <- rbind(res,  read.table(i, stringsAsFactors=FALSE, skip=1))
+  }
+  res <- deFactorize(res)
+  colnames(res) <- read.table(i, stringsAsFactors=FALSE)[1,]
+  return(res)
+}
+
 
 
 ##  ---------------------------------  ##
@@ -730,7 +782,13 @@ Find_position_gigs_single_chromo <- function(position, chromosome){
   file <- paste0("gigs_v2_chr", chromosome, ".nc")
   nc <- nc_open(paste0(DataLocation("GIGSv2"), file))
   snpnames <- ncvar_get(nc, "SNP_Name", start=c(1, 1), count=c(-1,-1))
-  tocollect <- which(snpnames %in% position)
+  tocollect <- NULL
+  for(i in position){
+    if(length(which(snpnames %in% i)) == 0)
+      tocollect <- c(tocollect, NA)
+    tocollect <- c(tocollect, which(snpnames %in% i))
+  }
+#  tocollect <- snpnames[which(snpnames %in% position)]
 #  study <- ncvar_get(nc, "Study")[tocollect]
 #  study <- ncvar_get(nc, "Position", start=c(tocollect), count=c(length(tocollect)))
 #  pos <- ncvar_get(nc, "Position")[tocollect]  #weird numbers...
@@ -750,7 +808,7 @@ FindSNPpositions_gigs <- function(snp_name, chatty=TRUE){
   if(length(grep("rs", snp_name)) > 0)
     stop("you are trying to find rs numbers in gigs")
   if(class(snp_name) == "character"){
-    snp_name <- cbind(snp_name, rep("Not given", length(snp_name)))
+    snp_name <- cbind(snp_name, rep("", length(snp_name)))
     snps <- snp_name
   }
   res <- NULL
@@ -799,18 +857,19 @@ CreateDosageDataFromGigs <- function(gigs_positions, chatty=TRUE, times=FALSE){
     }
     nc <- nc_open(paste0(DataLocation("GIGSv2"), i))
     samples <- ncvar_get(nc, "Sample_ID", start=c(1, 1), count=c(-1,-1))
+    snpname <- ncvar_get(nc, "SNP_Name", start=c(1,1), count=c(-1,-1))
     study <- rep(GetStudy(i), length(samples))
     batch <- rep(GetBatch(i), length(samples))
     ind <- 0
     if(chatty)
-      print(paste0("working on ", i, "which has ", length(sub_gigs_positions[,5]), "snps"))
-    for(snpi in sub_gigs_positions[,5]){
+      cat(paste0("\nworking on ", i, " which has ", length(sub_gigs_positions[,5]), " snps: "))
+    for(snpi in sub_gigs_positions[,3]){
       starttime <- proc.time()[[3]]
       ind <- ind + 1
-      if(chatty)
-        cat(paste(ind), " ")
-      lo <- as.numeric(sub_gigs_positions[,5][ind])
-      if(ncvar_get(nc, "SNP_Name", start=c(1, lo), count=c(-1,1)) == sub_gigs_positions[ind,3]){  #here to check that rs number matches correctly
+      lo <- which(snpname == snpi)
+      if(length(lo == 1)){
+        if(chatty)
+          cat(paste(ind), " ")
         dosage <- 2*ncvar_get(nc, "Prob_AA", start=c(lo,1), count=c(1, -1)) + ncvar_get(nc, "Prob_AB", start=c(lo,1), count=c(1,-1))
         probs <- cbind(probs, dosage)
         probsnamevector <- c(probsnamevector, paste0(sub_gigs_positions[ind,2], "_", sub_gigs_positions[ind,3]))
