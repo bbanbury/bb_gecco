@@ -10,7 +10,6 @@
 require(ncdf)
 require(ncdf4)
 
-## In the middle of transforming the files to a single function throughout.  Alos need to finish documentation for all the functions after the regulatory ones.  
 
 
 ##  ---------------------------------  ##
@@ -25,14 +24,15 @@ require(ncdf4)
 #' This function will add the specific path plus root directory  
 #' @param whichData Specifies which data you need, and will point to a file/directory
 #' @export
-#' @return Returns a path to the directory. THis function is where we can store where data lives in directories, so that when we change where data lives, we only have to change it once.  
+#' @return Returns a path to the directory. THis function is where we can store where data lives in directories, 
+#' so that when we change where data lives, we only have to change it once.  
 #' @seealso \link{MakePathtoNewcomb_P} \link{MakePathtoPeters_U}
 #' @examples
 #' DataLocation(hapmap_snp_names)
 DataLocation <- function(whichData){
   # GWAS
   if(whichData == "hapmap_snp_names")  return(MakePathtoPeters_U("/GECCO_Working/barb_working/HapMap_data/snp_names/"))
-  if(whichData == "hapmap")  return(MakePathtoPeters_U("/hapmap.data/GECCO_Data/"))
+  if(whichData == "hapmap")  return(MakePathtoPeters_U("/GECCO_Data/"))
   if(whichData == "hapmap_SNPinfo")  return(MakePathtoPeters_U("GECCO_Working/barb_working/HapMap_data/"))
   if(whichData == "rs_to_gigs_file")  return(MakePathtoPeters_U("/GECCO_Working/barb_working/rs_names_to_gigs_positions.csv"))
   if(whichData == "gigs_sample") return(MakePathtoPeters_U("/GECCO_DATA_POOLED/GIGS_V1/sample_files/gigs_sample.Rdata"))
@@ -40,7 +40,7 @@ DataLocation <- function(whichData){
   if(whichData == "GIGS_snp_names")  return(MakePathtoPeters_U("/GECCO_DATA_POOLED/GIGS_V2/snp_files/*.csv"))
   if(whichData == "gigs_pca")  return(MakePathtoPeters_U('GECCO_Working/keithworking/t275-work/pca.Rdata'))
   # Epi / Survival
-  if(whichData == "harmonized-epi")  return(MakePathtoPeters_U("/Data\\ Harmonization/Post-harmonization/Data/", server="cs"))
+  if(whichData == "harmonized-epi")  return(MakePathtoPeters_U("/Data Harmonization/Post-harmonization/Data/", server="cs"))
   if(whichData == "Jihyoun-dals")  return(MakePathtoPeters_U("GECCO_Working/Jihyounworking/Survival/DALS-CPS-II/DALS-surv-dat-04152014.csv"))
   if(whichData == "Jihyoun-cps2")  return(MakePathtoPeters_U("GECCO_Working/Jihyounworking/Survival/DALS-CPS-II/CPS2-surv-dat-04152014.csv"))
   if(whichData == "pooledSurv")  return(MakePathtoPeters_U("/GECCO_Working/mpassareworking/Survival/Combined\ Survival\ Update\ Has\ Surv\ Pooled.csv"))
@@ -73,8 +73,6 @@ DataLocation <- function(whichData){
 #' @examples
 #' MakePathtoPeters_U("/GECCO_Working", server="cs")
 MakePathtoPeters_U <- function(directory, server="home"){
-# make path no matter if on local or rhino
-# server can also be "cs" for "researcher server
   if(system("hostname", intern=TRUE) == "DHCP169022.FHCRC.ORG"){
     bp <- "/Volumes/bbanbury/Peters_U/"
     if(server == "cs")
@@ -101,8 +99,6 @@ MakePathtoPeters_U <- function(directory, server="home"){
 #' @examples
 #' MakePathtoNewcomb_P("/Molecular Correlates_ISACC", server="cs")
 MakePathtoNewcomb_P <- function(directory, server="cs"){
-# make path no matter if on local or rhino
-# server can also be "cs" for "researcher server
   if(system("hostname", intern=TRUE) == "DHCP169022.FHCRC.ORG"){
     bp <- "/Volumes/bbanbury/Newcomb_P/"
     if(server == "cs")
@@ -139,10 +135,9 @@ ChangeStudyNames <- function(study){
 #'
 #' Compact Display of SNP Names 
 #'
-#' This function prints a short summary of the SNP names to console, so it doesn't freeze up the machine if the list is huge. 
-#'
 #' @param x an object in the class "snp_names"
 #' @export
+#' @return This function prints a short summary of the SNP names to console, so it doesn't freeze up the machine if the list is huge. 
 #' @seealso \link{find_rs_hapmap} \link{FindSNPposition_hapmap}
 #' @examples
 #' load(DataLocation("hapmap_snp_names"), snp_names_113nhs_omni1.Rdata")
@@ -246,7 +241,7 @@ Use_snp_finder.py <- function(gene, upstream=0, downstream=0, snp_list="gigs", b
 #'
 #' Get Chromosome Number
 #'
-#' This function returns a chromosome from a filename 
+#' @return This function returns a chromosome from a filename 
 #'
 #' @param ncdfFileName An ncdf file name with chromosome number at the end
 #' @export
@@ -264,7 +259,7 @@ GetChromo <- function(ncdfFileName){
 #'
 #' Get Study out of ncdf file name
 #'
-#' This function returns a study from a filename 
+#' @return This function returns a study from a filename 
 #'
 #' @param ncdfFileName An ncdf file name with study name number at the beginning
 #' @export
@@ -531,17 +526,6 @@ Read_PriorityPruner_Results <- function(results_files){
 ##  ---------------------------------  ##
 
 
-# rs <- c("rs2736100", "rs401681", "rs10069690", "rs4635969",  "rs2853676", "rs2853677", "rs2242652", "rs402710",  "rs17246404", "rs10936601", "rs1317082", "rs12696304", "rs10936599")
-# RSAcross <- FindSNPposition_hapmap(rs, studies, directory=MakePathtoPeters_U(names.root))
-# snpDosage <- CreateDosageDataAcrossStudies(RSAcross, hapmap.data)
-# save(snpDosage, file=paste(barb.working, "snpDosage.Rdata"))
-
-#Create SNP details table (mostly useful when specific RS numbers are requested)
-# d <- CreateSNPDetailsTable(rs, studies, directory=barb.hapmap)
-# write.table(d, file=paste0(barb.working, "SNP_details.csv"), quote=FALSE, sep=" & ")
-# write.table(d, file=paste0("SNP_details.csv"), quote=FALSE, sep=",")
-
-
 
 #' Find RS Numbers from HapMap
 #'
@@ -616,13 +600,25 @@ FindSNPposition_hapmap <- function(rs_number, studies=NULL, chatty=TRUE){
 }
 
 
+#' Create a Dosage Dataset One Study
+#'
+#' Create dataset with Dosage Information for one hapmap study
+#'
+#' Somewhat of an internal function that returns a dataset with individuals as rows and rs_positions as columns for just one hapmap study (ex,"101ccfr" will return both "usc" and "usc2" batches). Internal, because it is hard to give the directory. If you don't want to have to figure that out, then use the function \link{CreateDosageDataAcrossStudies}
+#'
+#' @param rs_positions An object of the class "snp_location_info" that comes out of the FindSNPpositions* functions
+#' @param directory File path addition to find the nc files
+#' @export
+#' @seealso \link{FindSNPposition_hapmap} \link{CreateDosageDataAcrossStudies}
+#' @examples
+#' tmp <- FindSNPposition_hapmap(c("rs2736100", "rs401681", "rs10069690"), studies="102arctic")
+#' CreateDosageDataPerStudy(tmp, directory=paste0(DataLocation("hapmap"), "102arctic/102arctic_minusccfr/mach/"))
 CreateDosageDataPerStudy <- function(rs_positions, directory=NULL){
-#rs_positions should be like RSAcross (output from FindSNPpositions* functions)
-# make this its own class too and print statement
   files <- unique(rs_positions[,4])
   probs <- NULL
   probsnamevector <- NULL
   for(whichFile in files){
+  print(whichFile)
     nc <- nc_open(paste0(directory, whichFile))
     samples <- ncvar_get(nc, "Sample_ID", start=c(1, 1), count=c(-1,-1))
     study <- rep(GetStudy(whichFile), length(samples))
@@ -648,13 +644,24 @@ CreateDosageDataPerStudy <- function(rs_positions, directory=NULL){
   }
   return(res)
 }
-# CreateDosageDataPerStudy(rs_positions)
 
 
+#' Create a Dosage Dataset from HapMap
+#'
+#' Create dataset with Dosage Information for one or many hapmap studies
+#'
+#' This function uses the information in rs_positions (class snp_location_info) to gather a 
+#' dosage dataset.  There can be one study or many studies. Returns a dataset with individuals 
+#' as rows and rs_positions as columns. 
+#'
+#' @param rs_positions An object of the class "snp_location_info" that comes out of the FindSNPpositions* functions
+#' @param saveToRdata Optional file name to save Rdata to. Will not save if left NULL. 
+#' @export
+#' @seealso \link{FindSNPposition_hapmap} \link{CreateDosageDataPerStudy}
+#' @examples
+#' tmp <- FindSNPposition_hapmap(c("rs2736100", "rs401681", "rs10069690"), studies="101ccfr")
+#' CreateDosageDataAcrossStudies(tmp)
 CreateDosageDataAcrossStudies <- function(rs_positions, saveToRdata=NULL){
-  # for a vector of c(rs_numbers)
-  # for a vector of c(studies)
-  #if saveToData is a filename then it will save to working dir
   nostudies <- unique(paste(rs_positions[,1], rs_positions[,2], sep="_"))
   ddall <- data.frame(matrix(nrow=0, ncol=length(unique(rs_positions[,3]))+3))
   colnames(ddall) <- c("study", "batch", "netcdf_ID", unique(rs_positions[,3]))
@@ -670,21 +677,30 @@ CreateDosageDataAcrossStudies <- function(rs_positions, saveToRdata=NULL){
     }
     ddall <- rbind(ddall, dd)   ## NEED to join columns, because they are different
   }
-  #if(!is.null(saveToRdata)){
-  #  
-  #}
+  if(!is.null(saveToRdata)){
+    save(ddall, file=saveToRdata)
+  }
   return(ddall)
 }
-# CreateDosageDataAcrossStudies(rs_positions, hapmap.dir)
 
 
-GetCountAndBaselineAlleles <- function(rs_numbers, directory=NULL){
-# Get count alleles from legend file
-# will return a matrix with rs, position, and alleles in number format
+#' GetCountAndBaselineAlleles
+#'
+#' Get Count and Baseline Allele Information
+#'
+#' This function pulls the count and baseline allele information per locus from the legend file. Returns a 
+#' matrix with rs number, position, allele 1 (count), and allele 2 (baseline)
+#'
+#' @param rs_numbers A vector of rs numbers
+#' @export
+#' @seealso \link{CreateSNPDetailsTable} \link{CreateDosageDataPerStudy}
+#' @examples
+#' GetCountAndBaselineAlleles(c("rs2736100", "rs401681", "rs10069690"))
+GetCountAndBaselineAlleles <- function(rs_numbers){
   res <- matrix(nrow=length(rs_numbers), ncol=4)
   colnames(res) <- c("rs_number", "position", "Allele1", "Allele2")
   res[,1] <- rs_numbers
-  p <- paste0(directory, "legend-augmented.nc")
+  p <- paste0(DataLocation("hapmap_SNPinfo"), "legend-augmented.nc")
   nc <- nc_open(p)
   nameVector <- ncvar_get(nc, "SNP_Name", start=c(1,1), count=c(-1,-1))
   locations <- which(nameVector %in% rs_numbers)
@@ -697,19 +713,33 @@ GetCountAndBaselineAlleles <- function(rs_numbers, directory=NULL){
 }
 
 
-CreateSNPDetailsTable <- function(rs_numbers, studies){
-  # hapmap
-  # for a given list of snps, we want to create a table to be released with data
-  # should include: snp name, which chromosome it is on, the number of studies genotyped, the number of studies imputed, the count allele, the baseline allele, the mean R2, the R2Range, the mean CAF, and the CAF range
-  # be in barb_working/HapMap_data
-  # load(paste0(MakePathtoPeters_U(directory), "gecco_version3_SNPinfo_23studies.Rdata"))
+#' CreateSNPDetailsTable
+#'
+#' Create a SNP Table with details on hapmap position and alleles
+#'
+#' For a vector of snps, this function will pull all of the information we want to release with hapmap data.  
+#' This will create a table to use in the data release. Results will include: snp name (rs number), chromosome,
+#' position, the number of studies genotypes, the number of studies imputed, the count allele, the baseline allele,
+#' the mean R2, and the R2 range (min-max), the mean CAF, and the CAF range (min-max). 
+#'
+#' @param rs_numbers A vector of rs numbers
+#' @param studies A vector of studies to be included in the count
+#' @param chatty Option to print progress to screen
+#' @export
+#' @seealso \link{GetCountAndBaselineAlleles} 
+#' @examples
+#' studies <- c("101ccfr", "102arctic", "103dals")
+#' CreateSNPDetailsTable(c("rs2736100", "rs401681", "rs10069690"), studies)
+CreateSNPDetailsTable <- function(rs_numbers, studies, chatty=TRUE){
   dataNeeded <- c("snpsall", "Imputed.matrix", "R2.matrix", "CAF.matrix")
   if(!all(dataNeeded %in% ls())){
     whichNotLoaded <- which(!dataNeeded %in% ls())
     for(i in sequence(length(whichNotLoaded))){
-      load(paste0(DataLocation(hapmap_SNPinfo), dataNeeded[i], ".Rdata"))
+      if(chatty)
+        print(paste("loading", dataNeeded[whichNotLoaded[i]]))
+      load(paste0(DataLocation("hapmap_SNPinfo"), dataNeeded[whichNotLoaded[i]], ".Rdata"))
     }
-  }   
+  }
   nc <- nc_open(paste0(DataLocation("hapmap_SNPinfo"), "legend-augmented.nc"))
   dets <- matrix(nrow=length(rs_numbers), ncol=9)
   rownames(dets) <- rs_numbers
@@ -723,7 +753,7 @@ CreateSNPDetailsTable <- function(rs_numbers, studies){
       colsToInclude[i] <- FALSE
   }
   FlorasData <- cbind(snpsall[FlorasPos,], Imputed.matrix[FlorasPos, colsToInclude], R2.matrix[FlorasPos, colsToInclude], CAF.matrix[FlorasPos, colsToInclude])
-  alleles <- GetCountAndBaselineAlleles(rs_numbers, DataLocation("hapmap_SNPinfo"))
+  alleles <- GetCountAndBaselineAlleles(rs_numbers)
   for(i in sequence(dim(dets)[1])){
     h <- which(FlorasData[,1] == rownames(dets)[i])
     dets[i,1] <- FlorasData[h,3]  # chromo
@@ -743,20 +773,32 @@ CreateSNPDetailsTable <- function(rs_numbers, studies){
   }
   return(data.frame(dets))
 }
-# CreateSNPDetailsTable(rs, studies)
+
 
 
 
 
 ##  ---------------------------------  ##
 ##                                     ##
-##           GIGSv2 Functions          ##
+##            GIGS Functions           ##
 ##                                     ##
 ##  ---------------------------------  ##
 
 
+#' Find RS numbers in GIGSv1 Data
+#'
+#' Find RS numbers in the GIGSv1 dataset (not available for GIGSv2 yet)
+#'
+#' This function allows you to search an RS number for its corresponding GIGs name. Will return a table with two columns, rs number, and gigs number.  
+#'
+#' @param rs_numbers A vector of rs numbers
+#' @param studies A vector of studies to be included in the count
+#' @param chatty Option to print progress to screen
+#' @export
+#' @seealso \link{MakePriorityPrunerInputFile} 
+#' @examples
+#' find_rs_to_gigs(c("rs2736100", "rs401681", "rs10069690"))
 find_rs_to_gigs <- function(rs_number, chatty=TRUE){
-# use rs_to_gigs_positions to match known rs numbers with positions in gigs
   rs_to_gigs_file <- DataLocation("rs_to_gigs_file")
   res <- matrix(nrow=length(rs_number), ncol=2)
   colnames(res) <- c("rs_number", "gigs_number")
@@ -775,36 +817,59 @@ find_rs_to_gigs <- function(rs_number, chatty=TRUE){
 }
 
 
-Find_position_gigs_single_chromo <- function(position, chromosome){
-# position can be a vector of positions in the format 1:234
-  locs <- matrix(nrow=length(position), ncol=5)
+#' Find position in gigsv2
+#'
+#' Find a snp position in the gigsv2 dataset
+#'
+#' This function will use a gigs snp name (ie, 2:123) and find where that is located in the gigs dataset.
+#' This function only searches a single chromosome, so can also use \linl{FindSNPpositions_gigs} if you 
+#' need to do more than one. Returns a matrix with study (always gigs), gene(always NA), the snp name, 
+#' the ncdf file it is located, and the position within the file. 
+#'
+#' @param snp_name A vector of snp names in gigs format (ie, 1:1234)
+#' @param chromosome which chromosome to search. Could be written smarter so that it auto finds this from the position name.  Duh. 
+#' @export
+#' @seealso \link{FindSNPpositions_gigs} 
+#' @examples
+#' Find_position_gigs_single_chromo(c("5:1286516", "5:1322087", "5:1279790"), 5)
+Find_position_gigs_single_chromo <- function(snp_name, chromosome){
+  locs <- matrix(nrow=length(snp_name), ncol=5)
   colnames(locs) <- c("study", "gene", "gigs_name", "ncdf file", "position")
   file <- paste0("gigs_v2_chr", chromosome, ".nc")
   nc <- nc_open(paste0(DataLocation("GIGSv2"), file))
   snpnames <- ncvar_get(nc, "SNP_Name", start=c(1, 1), count=c(-1,-1))
   tocollect <- NULL
-  for(i in position){
+  for(i in snp_name){
     if(length(which(snpnames %in% i)) == 0)
       tocollect <- c(tocollect, NA)
     tocollect <- c(tocollect, which(snpnames %in% i))
   }
-#  tocollect <- snpnames[which(snpnames %in% position)]
-#  study <- ncvar_get(nc, "Study")[tocollect]
-#  study <- ncvar_get(nc, "Position", start=c(tocollect), count=c(length(tocollect)))
-#  pos <- ncvar_get(nc, "Position")[tocollect]  #weird numbers...
-  pos <- tocollect
-
-  locs[,1] <- rep("gigs", length(position))
-  locs[,2] <- rep(NA, length(position))
-  locs[,3] <- position
-  locs[,4] <- rep(file, length(position))
-  locs[,5] <- pos  
+  locs[,1] <- rep("gigs", length(snp_name))
+  locs[,2] <- rep(NA, length(snp_name))
+  locs[,3] <- snp_name
+  locs[,4] <- rep(file, length(snp_name))
+  locs[,5] <- tocollect
   return(locs)
 }
 
 
+#' Find position in gigsv2
+#'
+#' Find a snp position in the gigsv2 dataset
+#'
+#' This function will use a gigs snp name (ie, 2:123) and find where that is located in the gigs dataset.
+#' This function only searches over a single or many chromosomes. Returns a matrix with study (always gigs
+#' for gigs data), gene (if available), the snp name, the ncdf file it is located, and the position 
+#' within the file. If the snp_name you pass has gene information, then this will be preserved in the 
+#' output.  Otherwise it will be NA.  
+#'
+#' @param snp_name A vector of snp names in gigs format (ie, 1:1234) or a data frame in the class "snps_in_gene_regions"
+#' @param chatty Option to print progress to screen
+#' @export
+#' @seealso \link{Find_position_gigs_single_chromo} \link{MakeSNPDetailsTable_GIGS} \link{Use_snp_finder.py}
+#' @examples
+#' FindSNPpositions_gigs(c("5:1286516", "5:1322087", "5:1279790"))
 FindSNPpositions_gigs <- function(snp_name, chatty=TRUE){
-# snp_name can either be a vector of positions (ie, 1:234) or in the class "snps_in_gene_regions"
   if(length(grep("rs", snp_name)) > 0)
     stop("you are trying to find rs numbers in gigs")
   if(class(snp_name) == "character"){
@@ -833,17 +898,28 @@ FindSNPpositions_gigs <- function(snp_name, chatty=TRUE){
       res <- rbind(res, res2)
     }
   }
-  #res <- res[match(snps, res[,3]),]  #return in original order...broken
   class(res) <- "snp_location_info"
   return(res)
 }
-# gigs_positions <- FindSNPpositions_gigs(snp_name)
-# FindSNPpositions_gigs(snp_name)->l
-#  l[which(l[,2] == "TINF2"),]
-# FindSNPpositions_gigs(chr14)
 
 
-CreateDosageDataFromGigs <- function(gigs_positions, chatty=TRUE, times=FALSE){
+#' Create Dosage Dataset in GIGSv2
+#'
+#' Create a new Dosage Dataset from GIGSv2
+#'
+#' This function will create a gigs dosage dataset, with individuals as rows and snps as columns. If times 
+#' is selected, then the output wll be a list where the first element is the dosage data, and the second 
+#' element is the computational time. 
+#'
+#' @param gigs_positions An object of the class "snp_location_info" that comes out of the FindSNPpositions* functions
+#' @param chatty Option to print progress to screen
+#' @param report.times Option to return computational time with dataset as a second object in the list
+#' @export
+#' @seealso \link{CreateDosageDataAcrossStudies} \link{MakeSNPDetailsTable_GIGS} \link{Use_snp_finder.py}
+#' @examples
+#' tmp <- FindSNPpositions_gigs(c("5:1286516", "5:1322087", "5:1279790"))
+#' CreateDosageDataFromGigs(tmp)
+CreateDosageDataFromGigs <- function(gigs_positions, chatty=TRUE, report.times=FALSE){
   nochromos <- unique(gigs_positions[,4])
   ddall <- data.frame(matrix(nrow=0, ncol=length(unique(gigs_positions[,3]))+3))
   colnames(ddall) <- c("study", "batch", "netcdf_ID", unique(gigs_positions[,3]))
@@ -880,15 +956,29 @@ CreateDosageDataFromGigs <- function(gigs_positions, chatty=TRUE, times=FALSE){
       times <- c(times, endtime)
     }
   }
-  if(times)
-   return(list(res=res, times=times))
+  if(report.times)
+    return(list(res=res, times=times))
   return(res)
 }
 
 
+#' MakeSNPDetailsTable_GIGS
+#'
+#' Create a SNP Table with details on gigs position and alleles
+#'
+#' For a vector of snps, this function will pull all of the information we want to release with hapmap data.  
+#' This will create a table to use in the data release. Results will include: snp name, the count allele, 
+#' the baseline allele, R2, and CAF. 
+#'
+#' @param snps A vector of snps (ie, c("1:123", "2:234"))
+#' @param chatty Option to print progress to screen
+#' @export
+#' @seealso \link{CreateSNPDetailsTable} 
+#' @examples
+#' MakeSNPDetailsTable_GIGS(c("5:1286516", "5:1322087", "5:1279790"))
 MakeSNPDetailsTable_GIGS <- function(snps, chatty=TRUE){
   if(class(snps) != "snp_location_info")
-    snps <- FindSNPpositions_gigs(snps)
+    snps <- FindSNPpositions_gigs(snps, chatty)
   snps <- cbind(snps, sapply(snps[,4], GetChromo, USE.NAMES=FALSE))
   res <- matrix(nrow=0, ncol=7)
   files <- DataLocation("GIGS_snp_names")
@@ -923,7 +1013,21 @@ MakeSNPDetailsTable_GIGS <- function(snps, chatty=TRUE){
 ##  ---------------------------------  ##
 
 
-WhichEpiFilesToInclude <- function(epifiles, studies, files="1or2"){
+#' WhichEpiFilesToInclude
+#'
+#' Sift through available Epi Files 
+#'
+#' This function was written before chatting with Yi about the various datasets. So use with caution.
+#'
+#' @param studies A vector of studies to be included in the count
+#' @param files Argument to choose files with the extension 1/2. This is a super sucky function, because it ignores the other file types. 
+#' @return Will return a list with two vectors. The first ($files) is a vector of file names, and the second ($sst) is a vector of the studies
+#' @export
+#' @seealso \link{MakeDataAvailabilityTable} \link{CreateEpiDatasetPerStudy}
+#' @examples
+#' WhichEpiFilesToInclude(c("101ccfr", "108dachs"))
+WhichEpiFilesToInclude <- function(studies, files="1or2"){
+  epifiles <- list.files(path=DataLocation("harmonized-epi"))
   if(files == "1or2"){
     epifiles <- epifiles[-grep("0.csv", epifiles)]  #not ready
     epifiles <- epifiles[-grep("e.csv", epifiles)]  # exome chip
@@ -955,6 +1059,19 @@ WhichEpiFilesToInclude <- function(epifiles, studies, files="1or2"){
   return(list(files=epifiles, sst=csvfilenames))
 }
 
+
+#' GiveStudiesNumbers
+#'
+#' Give Studies their numbers 
+#'
+#' This function will add the study number to the name. This was done to match epi datasets to gwas datasets (which have them included already)
+#'
+#' @param study A single study (ex: "whi", or "nhs")
+#' @return Will return a new study name
+#' @export
+#' @seealso \link{MakeDataAvailabilityTable} \link{CreateSurvivalDataset}
+#' @examples
+#' GiveStudiesNumbers("whi")
 GiveStudiesNumbers <- function(study){
   s <- sub("\\d*$", "", study)
   if(s == "whi") return(paste0("105", study))
@@ -967,15 +1084,44 @@ GiveStudiesNumbers <- function(study){
   else return("ADD A NEW ONE")
 }
 
+
+#' ConvertTrueFalse
+#'
+#' Convert True/False to other variables
+#'
+#' This function will convert TRUE and FALSE to something esle.  Even though you can add 0 (for example, TRUE+0)
+#' to get 1 and 0, this function works by specifying any T/F variables. 
+#'
+#' @param TrueorFalse Boolean, either TRUE or FALSE
+#' @param True Conversion for TRUE variable
+#' @param False Conversion for FALSE variable
+#' @return Will return conversion
+#' @export
+#' @seealso \link{MakeDataAvailabilityTable} 
+#' @examples
+#' ConvertTrueFalse(TRUE)
+#' ConvertTrueFalse(TRUE, True="ppp", False="qqq")
 ConvertTrueFalse <- function(TrueorFalse, True="1", False="0"){
   if(TrueorFalse) return(True)
   else return(False)
 }
 
 
-GrepForEpiVars <- function(grepTerms, pathToEpiVariables){
-#  this function will grep for variable names that match some descriptor terms
-#  for example, find all variables that are associated with "smoking"
+#' GrepForEpiVars
+#'
+#' Grep for Available Epi Variables
+#'
+#' This function will search the list of variables file for matched terms. Matches are returned and you can choose 
+#' which variables to include this way.  
+#'
+#' @param grepTerms Which keywords to search (ex: "smoke", "BMI")
+#' @return Will return a vector of matching terms
+#' @export
+#' @seealso \link{MakeDataAvailabilityTable} 
+#' @examples
+#' GrepForEpiVars("smoke")
+#' GrepForEpiVars(c("BMI", "race"))
+GrepForEpiVars <- function(grepTerms){
 #  careful with some terms, like "sex", "case" it will pull in other variables
   load(DataLocation("listOfEpiVars"))
   variablesOfInterest <- NULL
@@ -990,28 +1136,44 @@ GrepForEpiVars <- function(grepTerms, pathToEpiVariables){
     ws2 <- which(vars[,2] == "sex")
     vars <- vars[-ws[which(!ws %in% ws2)],]
   }
-  vars <- data.frame(vars[-which(duplicated(vars[,2])),], stringsAsFactors=FALSE)
+  if(any(duplicated(vars[,2])))
+    vars <- data.frame(vars[-which(duplicated(vars[,2])),], stringsAsFactors=FALSE)
   colnames(vars) <- c("keyword", "variable name")
   return(vars)
 }  
-# GrepForEpiVars("smoke", pathToEpiVariables)
-# GrepForEpiVars(grepTerms, pathToEpiVariables)
 
 
-MakeDataAvailabilityTable <- function(epivars=NULL, survvars=NULL, studies, pathToEpiVariables, includeSurvival=TRUE){
-#eventually make another argument with pathToEpiData, whenever it is housed together
-  if(includeSurvival && is.null(survvars))
+#' MakeDataAvailabilityTable
+#'
+#' Make Data Availability Table for Epi Variables
+#'
+#' This function will return a table with the variables of interest as columns  
+#'
+#' @param grepTerms Which keywords to search (ex: "smoke", "BMI")
+#' @return Will return a vector of matching terms
+#' @export
+#' @seealso \link{MakeDataAvailabilityTable} 
+#' @examples
+#' MakeDataAvailabilityTable("smoke")
+#' MakeDataAvailabilityTable(c("smoke", "race", "BMI"))
+MakeDataAvailabilityTable <- function(epivars=NULL, studies=NULL, includeSurvival=FALSE, survvars=NULL){
+# could also do the number of individuals with data rather than any data
+  if(is.null(studies))
+    studies <- c("101ccfr", "109colo23", "112mec", "114phs", "115vital", "108dachs", 
+                "103dals", "111fccs", "110hpfs", "113nhs", "102arctic", "117hrtccr", 
+                "104plco", "105whi")
+  if(includeSurvival & is.null(survvars))
     stop("You need to add which survival variates")
   load(DataLocation("listOfEpiVars"))
   if(includeSurvival)
       epivars <- c(epivars, survvars)
   epi1 <- DataLocation("harmonized-epi")
-  epifiles <- WhichEpiFilesToInclude(system(paste0("ls ", epi1, "*.csv"), intern=TRUE), studies, files="1or2")
+  epifiles <- WhichEpiFilesToInclude(studies, files="1or2")
   m <- matrix(nrow=length(epivars), ncol=length(epifiles$files))
   rownames(m) <- epivars
   colnames(m) <- epifiles$sst
   for(j in sequence(length(epifiles$files))){
-    tmp <- read.csv(epifiles$files[j])
+    tmp <- read.csv(paste0(epi1, epifiles$files[j], collapse="/"))
     m[,j] <- rownames(m) %in% colnames(tmp)
   }
   if(includeSurvival){
@@ -1046,21 +1208,35 @@ MakeDataAvailabilityTable <- function(epivars=NULL, survvars=NULL, studies, path
 }
 
 
-
+#' CreateEpiDatasetPerStudy
+#'
+#' Create an Epi dataset from just a single study
+#'
+#' This function will return a table with subjects as rows and variables as columns. It only gets data 
+#' from a single study, so in this way it is really an internal function for \link{CreateEpiDataset}.
+#'
+#' @param variables Which variables to collect (ex: "smoke", "BMI")
+#' @param study Which study data to pull
+#' @param files Which files to use from the study (this is bad...)
+#' @param chatty Option to print progress to screen
+#' @return Returns a dataset of subjects x variables
+#' @export
+#' @seealso \link{CreateEpiDataset} 
+#' @examples
+#' CreateEpiDatasetPerStudy("smoke", "101ccfr")
 CreateEpiDatasetPerStudy <- function(variables, study, files="1or2", chatty=TRUE){
-# gather variables for a single study
   if(any(c("censor", "crcdeath", "time_surv") %in% variables))
     variables[-which(variables %in% c("censor", "crcdeath", "time_surv"))]
   if(!"outc" %in% variables)
     variables <- c("outc", variables)
   epi1 <- DataLocation("harmonized-epi")
-  epifiles <- WhichEpiFilesToInclude(system(paste0("ls ", epi1, "*.csv"), intern=TRUE), study, files=files)
+  epifiles <- WhichEpiFilesToInclude(study, files=files)
   m <- matrix(nrow=0, ncol=length(variables)+4)
   ind <- 0
   for(j in epifiles$files){
     ind <- ind+1
     Study <- sub(".csv", "", epifiles$sst[ind])
-    tmp <- read.csv(j)
+    tmp <- read.csv(paste0(epi1, j, collapse="/"))
     tmp <- cbind(Study, tmp[,which(colnames(tmp) %in% c("compassid", "netcdfid", "gecco_study", variables))])
     if(chatty)
       print(paste("working on", Study, "; dim =", paste(dim(tmp), collapse="_")))
@@ -1068,13 +1244,30 @@ CreateEpiDatasetPerStudy <- function(variables, study, files="1or2", chatty=TRUE
   }
   return(m)
 }
-# CreateEpiDatasetPerStudy(vars, study)
 
 
+#' CreateEpiDataset
+#'
+#' Create an Epi dataset
+#'
+#' This function will return a table with subjects as rows and variables as columns. It gets data 
+#' from a single or multiple stuies.
+#'
+#' @param variables Which variables to collect (ex: "smoke", "BMI")
+#' @param study Which studies to pull
+#' @param files Which files to use from the study (this is bad...)
+#' @param chatty Option to print progress to screen
+#' @return Returns a dataset of subjects as rows, and compassID, netcdfID, study name, and variables as columns
+#' @export
+#' @seealso \link{CreateEpiDatasetPerStudy} 
+#' @examples
+#' CreateEpiDataset("smoke", "101ccfr")
+#' CreateEpiDataset(c("smoke", "BMI"))
 CreateEpiDataset <- function(variables, studies=NULL, files="1or2", chatty=TRUE){
-# then each row will be compassID, netcdfID, study, data
+  warning("This is a super crappy function.....check all of Yi's notes for which studies to include and when")
   if(is.null(studies))
-    studies <- c("101ccfr","109colo23", "112mec", "114phs", "115vital", "108dachs", "103dals", "111fccs", "110hpfs", "113nhs", "102arctic", "117hrtccr", "104plco", "105whi")
+    studies <- c("101ccfr","109colo23", "112mec", "114phs", "115vital", "108dachs", "103dals", "111fccs", 
+                 "110hpfs", "113nhs", "102arctic", "117hrtccr", "104plco", "105whi")
   res <- matrix(nrow=0, ncol=length(variables)+4)
   for(i in studies){
     res <- rbind(res, CreateEpiDatasetPerStudy(variables, i, files, chatty))
@@ -1082,8 +1275,25 @@ CreateEpiDataset <- function(variables, studies=NULL, files="1or2", chatty=TRUE)
   return(res)
 }
 
+
+#' CreateSurvivalDataset
+#'
+#' Create a Survival dataset
+#'
+#' This function will return a table with subjects as rows and variables as columns. It gets data 
+#' from a single or multiple stuies.
+#'
+#' @param variables Which variables to collect. If "all", then it returns all columns with data.
+#' @param study Which studies to pull, if NULL, then it returns all studies
+#' @param data Which data files to use. There are several different survival datasets floating about, you can choose to use the ones for pooled GECCO, separate GECCO, or separate ISACC
+#' @param chatty Option to print progress to screen
+#' @return Returns a dataset of subjects as rows, and compassID, netcdfID, study name, and variables as columns
+#' @export
+#' @seealso \link{CreateEpiDatasetPerStudy} 
+#' @examples
+#' CreateSurvivalDataset("all")
+#' l <- CreateSurvivalDataset("censor", data="separateGecco")
 CreateSurvivalDataset <- function(variables="all", studies=NULL, data="pooledGecco"){
-#make dataset with "pooledGecco", "separateGecco", "separateIsacc"
   if(!is.null(studies))
     stop("need to fix this so that it doesn't return all studies")
   if(variables == "all")
@@ -1129,7 +1339,7 @@ CreateSurvivalDataset <- function(variables="all", studies=NULL, data="pooledGec
         }
       }
 #      res <- rbind(res, tmp)
-      studiesToKeep[i] <- length(which(is.na(tmp)))/dim(tmp)[1]
+      studiesToKeep[i] <- length(which(is.na(tmp)))/dim(tmp)[1]  #amount of missing data
     }
     names(studiesToKeep) <- studiesFromFilenames
     studiesToUse <- ToKeepOrNot(studiesToKeep)  #might be a good place to add certain studies only
@@ -1180,8 +1390,19 @@ CreateSurvivalDataset <- function(variables="all", studies=NULL, data="pooledGec
 }
 
 
+#' ToKeepOrNot
+#'
+#' To Keep a Study or Discard it
+#'
+#' For a vector of studies, it returns T/F to keep each or not. Really odd function I wrote...might 
+#' be worthless.  But it tries to maximize the amount of data. It will pull in studies with the same
+#' name prefix and see which has more data and keep that one. 
+#'
+#' @param vectorofstudiestokeep Names vector of studies and their amount of missing data
+#' @return Returns boolean vector of to keep study (TRUE) or not (FALSE)
+#' @export
+#' @seealso \link{CreateSurvivalDataset} 
 ToKeepOrNot <- function(vectorofstudiestokeep){
-    #return a vector as long with T/F to keep per study
   name <- sapply(names(vectorofstudiestokeep), gsub, pattern="[-_]", replacement=" ", USE.NAMES=FALSE)
   for(i in sequence(length(name))){
     name[i] <- strsplit(name[i], split=" ", fixed=TRUE)[[1]][1]
@@ -1195,6 +1416,18 @@ ToKeepOrNot <- function(vectorofstudiestokeep){
 }
 
 
+#' MakeEpiDetailsTable
+#'
+#' Create a Epi-Variable Table with details
+#'
+#' Returns a table with the epi variable, a short description, and the permissible values.
+#' This table can be used when we release the data.  
+#'
+#' @param variables A vector of epi variables
+#' @export
+#' @seealso \link{CreateEpiDataset} 
+#' @examples
+#' MakeEpiDetailsTable(c("age_ref", "BMI", "alcoholc"))
 MakeEpiDetailsTable <- function(variables) {
   load(DataLocation("listOfEpiVars"))
   dets <- listOfVariables[which(listOfVariables[,2] %in% variables),]
@@ -1218,6 +1451,25 @@ MakeEpiDetailsTable <- function(variables) {
 ##  ---------------------------------  ##
 
 
+#' MergeEpiAndSurvivalData
+#'
+#' Merge Epi and Survival Datasets
+#'
+#' This is very straightforward function to merge two datasets by some variable.  Really could 
+#' just use the merge function, but this catches a few extra things.  
+#'
+#' @param EpiDataset An Epi dataset
+#' @param SurvivalDataset A Survival dataset
+#' @param merge_by How to merge the two.  For Epi and Survival, it will always be by compassid
+#' @param all Keep all records (TRUE) or just those that intersect (FALSE)
+#' @return Returns a dataset of subjects as rows, and compassID, netcdfID, study name, and variables as columns
+#' @export
+#' @seealso \link{CreateEpiDatase} \link{CreateSurvivalDataset}
+#' @examples
+#' epi <- CreateEpiDataset(c("smoke", "BMI"))
+#' surv <- CreateSurvivalDataset("all")
+#' MergeEpiAndSurvivalData(epi, surv)
+#' MergeEpiAndSurvivalData(epi, surv, all=FALSE)
 MergeEpiAndSurvivalData <- function(EpiDataset, SurvivalDataset, merge_by="compassid", all=TRUE){
 # maybe try to make this smart, bu detecting *.x or *.y columns and dealing with them
   mergedSet <- merge(EpiDataset, SurvivalDataset, by=merge_by, all=all)  #compare compassID
@@ -1235,8 +1487,25 @@ MergeEpiAndSurvivalData <- function(EpiDataset, SurvivalDataset, merge_by="compa
 
 
 
-## New function to merge epi/GWAS data?
-
+#' MergeEpiAndGIGSdata
+#'
+#' Merge Epi and GIGS Datasets
+#'
+#' This is very straightforward function to merge two datasets by some variable.  Really could 
+#' just use the merge function, but this catches a few extra things.  
+#'
+#' @param EpiDataset An Epi dataset
+#' @param SurvivalDataset A Survival dataset
+#' @param merge_by How to merge the two.  For Epi and Survival, it will always be by compassid
+#' @param all Keep all records (TRUE) or just those that intersect (FALSE)
+#' @return Returns a dataset of subjects as rows, and compassID, netcdfID, study name, and variables as columns
+#' @export
+#' @seealso \link{CreateEpiDatase} \link{CreateSurvivalDataset}
+#' @examples
+#' epi <- CreateEpiDataset(c("smoke", "BMI"))
+#' surv <- CreateSurvivalDataset("all")
+#' MergeEpiAndSurvivalData(epi, surv)
+#' MergeEpiAndSurvivalData(epi, surv, all=FALSE)
 MergeEpiAndGIGSdata <- function(EpiDataset, GigsDataset, merge_by="netcdfid"){
   mergedSet <- merge(EpiDataset, GigsDataset, by=merge_by, all=TRUE)  #compare compassID
   if(!all(mergedSet$compassid.x == mergedSet$compassid.y, na.rm=TRUE))
