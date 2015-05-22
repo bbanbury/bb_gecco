@@ -17,6 +17,8 @@ MakePriorityPrunerInputFile(snplist, pvals = "gigsv2", forceSelect = NULL,
 \item{designScore}{For now, this doesn't really work other than to assign all values the same 1 status. Flag indicating if the SNP should be selected (kept) regardless of its LD with other selected SNPs or other filtering criteria specified, such as MAF or design score (1=true, 0=false).}
 
 \item{chatty}{Option to print progress to screen}
+
+\item{save.file}{Option to save results to files. This will save a separate file for each chromosome in the snplist.}
 }
 \description{
 Auto create an input file for the program PriorityPruner from a vector of snp names
@@ -25,7 +27,7 @@ Auto create an input file for the program PriorityPruner from a vector of snp na
 This function returns a table with the required columns for the program PriorityPruner. These include: snp_name, chr, pos, a1, a2, P, forceSelect, and designScore.
 }
 \examples{
-MakePriorityPrunerInputFile(c("rs3181096", "rs3863057", "rs6666554"))
+MakePriorityPrunerInputFile(c("rs3181096", "rs3863057", "rs6666554"), save.file=FALSE)
 }
 \seealso{
 \link{MakeSNPDetailsTable_GIGS} \link{GetMarginal} \link{Run_PriorityPruner}

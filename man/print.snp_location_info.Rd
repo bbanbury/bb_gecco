@@ -8,6 +8,8 @@
 }
 \arguments{
 \item{x}{an object in the class "snp_location_info"}
+
+\item{...}{Additional arguments passed to print}
 }
 \description{
 Compact Display of SNPs locations

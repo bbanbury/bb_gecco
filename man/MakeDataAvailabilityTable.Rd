@@ -8,7 +8,13 @@ MakeDataAvailabilityTable(epivars = NULL, studies = NULL,
   includeSurvival = FALSE, survvars = NULL)
 }
 \arguments{
-\item{grepTerms}{Which keywords to search (ex: "smoke", "BMI")}
+\item{epivars}{Which covariates to include}
+
+\item{studies}{Which studies to pull, if left NULL it will use all}
+
+\item{includeSurvival}{Boolean, Do you want to include survival variables}
+
+\item{survvars}{Which survival variables to include}
 }
 \value{
 Will return a vector of matching terms

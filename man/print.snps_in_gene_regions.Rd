@@ -8,6 +8,8 @@
 }
 \arguments{
 \item{x}{an object in the class "snps_in_gene_regions"}
+
+\item{...}{Additional arguments passed to print}
 }
 \description{
 Compact Display of SNPs in gene regions

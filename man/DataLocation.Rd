@@ -17,7 +17,7 @@ so that when we change where data lives, we only have to change it once.
 This function will add the specific path plus root directory
 }
 \examples{
-DataLocation(hapmap_snp_names)
+DataLocation("hapmap_snp_names")
 }
 \seealso{
 \link{MakePathtoNewcomb_P} \link{MakePathtoPeters_U}

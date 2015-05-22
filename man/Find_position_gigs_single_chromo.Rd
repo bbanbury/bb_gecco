@@ -16,7 +16,7 @@ Find a snp position in the gigsv2 dataset
 }
 \details{
 This function will use a gigs snp name (ie, 2:123) and find where that is located in the gigs dataset.
-This function only searches a single chromosome, so can also use \linl{FindSNPpositions_gigs} if you
+This function only searches a single chromosome, so can also use \link{FindSNPpositions_gigs} if you
 need to do more than one. Returns a matrix with study (always gigs), gene(always NA), the snp name,
 the ncdf file it is located, and the position within the file.
 }

@@ -33,6 +33,6 @@ MergeEpiAndSurvivalData(epi, surv)
 MergeEpiAndSurvivalData(epi, surv, all=FALSE)
 }
 \seealso{
-\link{CreateEpiDatase} \link{CreateSurvivalDataset}
+\link{CreateEpiDataset} \link{CreateSurvivalDataset}
 }
 

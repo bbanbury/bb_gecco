@@ -7,11 +7,9 @@
 find_rs_to_gigs(rs_number, chatty = TRUE)
 }
 \arguments{
+\item{rs_number}{A vector of rs numbers}
+
 \item{chatty}{Option to print progress to screen}
-
-\item{rs_numbers}{A vector of rs numbers}
-
-\item{studies}{A vector of studies to be included in the count}
 }
 \description{
 Find RS numbers in the GIGSv1 dataset (not available for GIGSv2 yet)

@@ -9,11 +9,11 @@ CreateEpiDataset(variables, studies = NULL, files = "1or2", chatty = TRUE)
 \arguments{
 \item{variables}{Which variables to collect (ex: "smoke", "BMI")}
 
+\item{studies}{Which studies to pull, if left NULL it will use all}
+
 \item{files}{Which files to use from the study (this is bad...)}
 
 \item{chatty}{Option to print progress to screen}
-
-\item{study}{Which studies to pull}
 }
 \value{
 Returns a dataset of subjects as rows, and compassID, netcdfID, study name, and variables as columns

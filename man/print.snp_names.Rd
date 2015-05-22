@@ -4,10 +4,12 @@
 \alias{print.snp_names}
 \title{print.snp_names}
 \usage{
-\method{print}{snp_names}(x)
+\method{print}{snp_names}(x, ...)
 }
 \arguments{
 \item{x}{an object in the class "snp_names"}
+
+\item{...}{Additional arguments passed to print}
 }
 \value{
 This function prints a short summary of the SNP names to console, so it doesn't freeze up the machine if the list is huge.

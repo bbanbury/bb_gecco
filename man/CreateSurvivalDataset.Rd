@@ -10,11 +10,9 @@ CreateSurvivalDataset(variables = "all", studies = NULL,
 \arguments{
 \item{variables}{Which variables to collect. If "all", then it returns all columns with data.}
 
+\item{studies}{Which studies to pull, if NULL, then it returns all studies}
+
 \item{data}{Which data files to use. There are several different survival datasets floating about, you can choose to use the ones for pooled GECCO, separate GECCO, or separate ISACC}
-
-\item{study}{Which studies to pull, if NULL, then it returns all studies}
-
-\item{chatty}{Option to print progress to screen}
 }
 \value{
 Returns a dataset of subjects as rows, and compassID, netcdfID, study name, and variables as columns
