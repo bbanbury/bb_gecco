@@ -1,7 +1,7 @@
-Package: bb_gecco
+Package: bb.gecco
 Version: 1.0
 Date: 2015-05-22
-Title: bb_gecco: Barbs functions for fetching gecco and isacc data
+Title: bb.gecco: Barbs functions for fetching gecco and isacc data
 Author: Barb Banbury <bbanbury@fredhutch.org>
 Maintainer: Barb Banbury <bbanbury@fredhutch.org>
 BugReports: TBD
