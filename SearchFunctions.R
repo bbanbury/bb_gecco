@@ -1,8 +1,8 @@
 ##  ---------------------------------  ##
 ##                                     ##
 ##        Data Search Functions        ##
-##             (c) BBanbury            ##
-##             24 April 15             ##
+##              BBanbury               ##
+##              22 May 15              ##
 ##                                     ##
 ##  ---------------------------------  ##
 
@@ -1259,12 +1259,12 @@ CreateEpiDatasetPerStudy <- function(variables, study, files="1or2", chatty=TRUE
 #' @param chatty Option to print progress to screen
 #' @return Returns a dataset of subjects as rows, and compassID, netcdfID, study name, and variables as columns
 #' @export
-#' @seealso \link{CreateEpiDatasetPerStudy} 
+#' @seealso \link{CreateEpiDatasetPerStudy} \link{Yi_GetEpiDataFromGigs}
 #' @examples
 #' CreateEpiDataset("smoke", "101ccfr")
 #' CreateEpiDataset(c("smoke", "BMI"))
 CreateEpiDataset <- function(variables, studies=NULL, files="1or2", chatty=TRUE){
-  warning("This is a super crappy function.....check all of Yi's notes for which studies to include and when")
+  warning("This is a super crappy function.....check all of Yi's notes for which studies to include and when or just use her function")
   if(is.null(studies))
     studies <- c("101ccfr","109colo23", "112mec", "114phs", "115vital", "108dachs", "103dals", "111fccs", 
                  "110hpfs", "113nhs", "102arctic", "117hrtccr", "104plco", "105whi")
@@ -1495,78 +1495,27 @@ MergeEpiAndSurvivalData <- function(EpiDataset, SurvivalDataset, merge_by="compa
 #' just use the merge function, but this catches a few extra things.  
 #'
 #' @param EpiDataset An Epi dataset
-#' @param SurvivalDataset A Survival dataset
-#' @param merge_by How to merge the two.  For Epi and Survival, it will always be by compassid
+#' @param GigsDataset A Gigs dataset
+#' @param merge_by How to merge the two.  For Epi and Gigs, it will always be by netcdfid
 #' @param all Keep all records (TRUE) or just those that intersect (FALSE)
 #' @return Returns a dataset of subjects as rows, and compassID, netcdfID, study name, and variables as columns
 #' @export
-#' @seealso \link{CreateEpiDatase} \link{CreateSurvivalDataset}
+#' @seealso \link{MergeEpiAndSurvivalData}
 #' @examples
 #' epi <- CreateEpiDataset(c("smoke", "BMI"))
-#' surv <- CreateSurvivalDataset("all")
-#' MergeEpiAndSurvivalData(epi, surv)
-#' MergeEpiAndSurvivalData(epi, surv, all=FALSE)
-MergeEpiAndGIGSdata <- function(EpiDataset, GigsDataset, merge_by="netcdfid"){
-  mergedSet <- merge(EpiDataset, GigsDataset, by=merge_by, all=TRUE)  #compare compassID
+#' tmp <- FindSNPpositions_gigs(c("5:1286516", "5:1322087", "5:1279790"))
+#' gigs <- CreateDosageDataFromGigs(tmp)
+#' MergeEpiAndGIGSdata(epi, gigs, all=FALSE)
+MergeEpiAndGIGSdata <- function(EpiDataset, GigsDataset, merge_by="netcdfid", all=TRUE){
+  if(tolower(merge_by) == "netcdfid"){
+    x <- "netcdfid"
+    y <- "netcdf_ID"
+  }
+  mergedSet <- merge(EpiDataset, GigsDataset, by.x=x, by.y=y, all=all)  #compare compassID
   if(!all(mergedSet$compassid.x == mergedSet$compassid.y, na.rm=TRUE))
     return("stop, merge didn't work right")
   return(mergedSet)
 }
-
-
-
-
-
-
-
-
-
-
-
-##  ---------------------------------  ##
-##                                     ##
-##      new datasets for parsing       ##
-##                                     ##
-##  ---------------------------------  ##
-
-# Make SNP names list with all RS numbers for each study
-#setwd(paste0(barb.working, "/HapMap_data/snp_names"))
-#for(i in list.files(hapmap.data)){
-#  # i <- list.files(hapmap.data)[15]
-#  datatypes <- list.files(paste(hapmap.data, i, sep="/"))
-#  for(typ in datatypes){
-#    dosages <- list.files(paste(hapmap.data, i, typ, "mach", sep="/"))
-#    snp_names <- list()
-#    for(dos in dosages){
-#      print(dos)
-#      nc <- open.ncdf(paste(hapmap.data, i, typ, "mach", dos, sep="/"))
-#      snp_names[[dos]] <- get.var.ncdf(nc, "SNP_Name", start=c(1,1), count=c(-1,-1))
-#      save(snp_names, file=paste0("snp_names_", typ, ".Rdata"))  #save iteratively
-#    }
-#    class(snp_names) <- "snp_names"
-#    save(snp_names, file=paste0("snp_names_", typ, ".Rdata"))  #save final with new class
-#  }
-#}
-
-# Make SNP names list with all RS numbers for GIGSV2
-#setwd(MakePathtoPeters_U(names.root))
-# don't need this because gigsv2/snp_files has csv files with rs numbers
-
-
-
-# To find rs numbers in GIGS, you need to know their respective locations
-# These were done for GIGSv1, but not for GIGSv2
-# Keith made the original Rdata files and I pulled them into R (took forever) and then created a two column csv that could then be grepped in system rather than having to load it all in R
-
-# load("/shared/silo_researcher/Peters_U/GECCO_Working/keithworking/t249-work/WGS-rs-mapping.Rdata")
-# whichSNPsHaveNames <- which(dbSNP_rs_name != "NA")
-# write.table(matrix(c("rs_name", "position"), nrow=1), file="rs_names_to_gigs_positions.csv", col.names=FALSE, row.names=FALSE, sep=",", quote=FALSE)
-#for(i in whichSNPsHaveNames){
-#  write.table(matrix(c(dbSNP_rs_name[i], WGS_SNP_name[i]), nrow=1), file="rs_names_to_gigs_positions.csv", col.names=FALSE, row.names=FALSE, sep=",", append=TRUE, quote=FALSE)
-#}
-
-# file <- "/Volumes/bbanbury/Peters_U/GECCO_Working/barb_working/rs_names_to_gigs_positions.csv"
-# system(paste("grep rs144022023", file), intern=TRUE)
 
 
 
@@ -1584,6 +1533,20 @@ MergeEpiAndGIGSdata <- function(EpiDataset, GigsDataset, merge_by="netcdfid"){
 
 
 
+#' Yi_GetEpiDataFromGigs
+#'
+#' Yis Function for Creating Epi Datast Using Gigs PCA
+#'
+#' 
+#'
+#' @param env Epi variables to include
+#' @return Returns a dataset of subjects as rows, and variables plus lots of other info (like drop 
+#' status) as columns. Also includes PCs from gigs data. 
+#' @export
+#' @seealso \link{MergeEpiAndSurvivalData}
+#' @examples
+#' env <- c('famhx1','famhx_reln1','ibd','study_site','sex','asp_ref','aspirin','cancer_site_sum1', 'cancer_site_sum2','age_dx','BMI5','age_dxsel','stage','stage2','stage3')
+#' Yi_GetEpiDataFromGigs(c('famhx1','ibd'))
 Yi_GetEpiDataFromGigs <- function(env){
 # can not include variables which are in the sameple file (they get added anyway)
   load(DataLocation("gigs_sample"))
@@ -1625,7 +1588,8 @@ Yi_GetEpiDataFromGigs <- function(env){
     std <- sample0[sample0$study==i,'lab']
     if(i %in% 105){ # WHI samples from exomechip 
       dat.e <- read.csv(paste0(Epath,substr(std,1,nchar(std)-1),'_e.csv'))
-      dat <- rbind(dat,dat.e[!dat.e$compassid %in% dat$compassid,c('compassid','outc',env)])
+      if(any(!dat.e$compassid %in% dat$compassid))  # Barbs addition, because it won't run if all ==
+        dat <- rbind(dat,dat.e[!dat.e$compassid %in% dat$compassid,c('compassid','outc',env)])
     }
     if(i %in% 101){ #CCFR samples from CCFR and CCFR 2 
       dat.1 <- read.csv(paste0(Epath,substr(std,1,nchar(std)-1),'.csv'))
@@ -1687,6 +1651,55 @@ Yi_GetEpiDataFromGigs <- function(env){
 # /Volumes/researcher/Peters_U/Data Harmonization/Post-harmonization/Data
 # files that end in 0' don't touch
 # files that end in 'e' exome chip
+
+
+
+
+##  ---------------------------------  ##
+##                                     ##
+##      new datasets for parsing       ##
+##                                     ##
+##  ---------------------------------  ##
+
+# Make SNP names list with all RS numbers for each study
+#setwd(paste0(barb.working, "/HapMap_data/snp_names"))
+#for(i in list.files(hapmap.data)){
+#  # i <- list.files(hapmap.data)[15]
+#  datatypes <- list.files(paste(hapmap.data, i, sep="/"))
+#  for(typ in datatypes){
+#    dosages <- list.files(paste(hapmap.data, i, typ, "mach", sep="/"))
+#    snp_names <- list()
+#    for(dos in dosages){
+#      print(dos)
+#      nc <- open.ncdf(paste(hapmap.data, i, typ, "mach", dos, sep="/"))
+#      snp_names[[dos]] <- get.var.ncdf(nc, "SNP_Name", start=c(1,1), count=c(-1,-1))
+#      save(snp_names, file=paste0("snp_names_", typ, ".Rdata"))  #save iteratively
+#    }
+#    class(snp_names) <- "snp_names"
+#    save(snp_names, file=paste0("snp_names_", typ, ".Rdata"))  #save final with new class
+#  }
+#}
+
+# Make SNP names list with all RS numbers for GIGSV2
+#setwd(MakePathtoPeters_U(names.root))
+# don't need this because gigsv2/snp_files has csv files with rs numbers
+
+
+
+# To find rs numbers in GIGS, you need to know their respective locations
+# These were done for GIGSv1, but not for GIGSv2
+# Keith made the original Rdata files and I pulled them into R (took forever) and then created a two column csv that could then be grepped in system rather than having to load it all in R
+
+# load("/shared/silo_researcher/Peters_U/GECCO_Working/keithworking/t249-work/WGS-rs-mapping.Rdata")
+# whichSNPsHaveNames <- which(dbSNP_rs_name != "NA")
+# write.table(matrix(c("rs_name", "position"), nrow=1), file="rs_names_to_gigs_positions.csv", col.names=FALSE, row.names=FALSE, sep=",", quote=FALSE)
+#for(i in whichSNPsHaveNames){
+#  write.table(matrix(c(dbSNP_rs_name[i], WGS_SNP_name[i]), nrow=1), file="rs_names_to_gigs_positions.csv", col.names=FALSE, row.names=FALSE, sep=",", append=TRUE, quote=FALSE)
+#}
+
+# file <- "/Volumes/bbanbury/Peters_U/GECCO_Working/barb_working/rs_names_to_gigs_positions.csv"
+# system(paste("grep rs144022023", file), intern=TRUE)
+
 
 
 
