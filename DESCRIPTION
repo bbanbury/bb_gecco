@@ -1,0 +1,14 @@
+Package: bb_gecco
+Version: 1.0
+Date: 2015-05-22
+Title: bb_gecco: Barbs functions for fetching gecco and isacc data
+Author: Barb Banbury <bbanbury@fredhutch.org>
+Maintainer: Barb Banbury <bbanbury@fredhutch.org>
+BugReports: TBD
+Depends:
+    R (>= 2.13.0)
+Imports:
+    ncdf, ncdf4, Rmpi
+LazyData: yes
+Description: This is a collection of tools for gathering Epi, Survival, GWAS data from the GECCO and ISACC datasets.  There are also a few other wrapper functions, for using PriorityPruner and snp_finder. 
+License: GPL (>= 2)
