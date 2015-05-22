@@ -477,7 +477,7 @@ MakePriorityPrunerInputFile <- function(snplist, pvals="gigsv2", forceSelect=NUL
 #' @export
 #' @seealso \link{MakePriorityPrunerInputFile} \link{Read_PriorityPruner_Results}
 #' @examples
-#' Run_PriorityPruner("snp_table_chr1")
+#' \notrun{Run_PriorityPruner("snp_table_chr1")}
 Run_PriorityPruner <- function(snp_table_file, datasource="gigsv2", r2=0.5, report.call=FALSE){
   if(length(grep("rhino", system("hostname", intern=TRUE))) < 1)
     stop("Must be on a rhino machine")
@@ -511,7 +511,7 @@ Run_PriorityPruner <- function(snp_table_file, datasource="gigsv2", r2=0.5, repo
 #' @export
 #' @seealso \link{MakePriorityPrunerInputFile} \link{Run_PriorityPruner}
 #' @examples
-#' Read_PriorityPruner_Results(list.files(pattern="\\.results"))
+#' \notrun{Read_PriorityPruner_Results(list.files(pattern="\\.results"))}
 Read_PriorityPruner_Results <- function(results_files){
   res <- NULL
   for(i in results_files){
@@ -593,6 +593,7 @@ FindSNPposition_hapmap <- function(rs_number, studies=NULL, chatty=TRUE){
     snps_names_file <- system(paste0("ls ", directory, "*", i, "*"), intern=TRUE)
     for(j in snps_names_file){
       nafile <- GetLastFileNameInPath(j)
+      snp_names <- NULL
       load(j)
       if("snp_names" %in% ls()){
         rs_positions <- find_rs_hapmap(rs_number, snp_names)
@@ -617,7 +618,8 @@ FindSNPposition_hapmap <- function(rs_number, studies=NULL, chatty=TRUE){
 #' @seealso \link{FindSNPposition_hapmap} \link{CreateDosageDataAcrossStudies}
 #' @examples
 #' tmp <- FindSNPposition_hapmap(c("rs2736100", "rs401681", "rs10069690"), studies="102arctic")
-#' CreateDosageDataPerStudy(tmp, directory=paste0(DataLocation("hapmap"), "102arctic/102arctic_minusccfr/mach/"))
+#' dir <- "102arctic/102arctic_minusccfr/mach/"
+#' CreateDosageDataPerStudy(tmp, directory=paste0(DataLocation("hapmap"), dir))
 CreateDosageDataPerStudy <- function(rs_positions, directory=NULL){
   files <- unique(rs_positions[,4])
   probs <- NULL
@@ -1552,7 +1554,8 @@ MergeEpiAndGIGSdata <- function(EpiDataset, GigsDataset, merge_by="netcdfid", al
 #' @export
 #' @seealso \link{MergeEpiAndSurvivalData}
 #' @examples
-#' env <- c('famhx1','famhx_reln1','ibd','study_site','sex','asp_ref','aspirin','cancer_site_sum1', 'cancer_site_sum2','age_dx','BMI5','age_dxsel','stage','stage2','stage3')
+#' env <- c('famhx1','famhx_reln1','ibd','study_site','sex','asp_ref','aspirin','cancer_site_sum1', 
+#'          'cancer_site_sum2','age_dx','BMI5','age_dxsel','stage','stage2','stage3')
 #' Yi_GetEpiDataFromGigs(c('famhx1','ibd'))
 Yi_GetEpiDataFromGigs <- function(env){
 # can not include variables which are in the sameple file (they get added anyway)

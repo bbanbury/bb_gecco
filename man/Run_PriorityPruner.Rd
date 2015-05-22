@@ -23,7 +23,7 @@ Run PriorityPruner on Gizmo Cluster
 This function will batch PriorityPruner jobs to Gizmo cluster from a rhino node
 }
 \examples{
-Run_PriorityPruner("snp_table_chr1")
+\\notrun{Run_PriorityPruner("snp_table_chr1")}
 }
 \seealso{
 \link{MakePriorityPrunerInputFile} \link{Read_PriorityPruner_Results}

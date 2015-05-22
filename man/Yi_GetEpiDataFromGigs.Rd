@@ -17,7 +17,8 @@ status) as columns. Also includes PCs from gigs data.
 Yis Function for Creating Epi Datast Using Gigs PCA
 }
 \examples{
-env <- c('famhx1','famhx_reln1','ibd','study_site','sex','asp_ref','aspirin','cancer_site_sum1', 'cancer_site_sum2','age_dx','BMI5','age_dxsel','stage','stage2','stage3')
+env <- c('famhx1','famhx_reln1','ibd','study_site','sex','asp_ref','aspirin','cancer_site_sum1',
+         'cancer_site_sum2','age_dx','BMI5','age_dxsel','stage','stage2','stage3')
 Yi_GetEpiDataFromGigs(c('famhx1','ibd'))
 }
 \seealso{

@@ -19,7 +19,8 @@ Somewhat of an internal function that returns a dataset with individuals as rows
 }
 \examples{
 tmp <- FindSNPposition_hapmap(c("rs2736100", "rs401681", "rs10069690"), studies="102arctic")
-CreateDosageDataPerStudy(tmp, directory=paste0(DataLocation("hapmap"), "102arctic/102arctic_minusccfr/mach/"))
+dir <- "102arctic/102arctic_minusccfr/mach/"
+CreateDosageDataPerStudy(tmp, directory=paste0(DataLocation("hapmap"), dir))
 }
 \seealso{
 \link{FindSNPposition_hapmap} \link{CreateDosageDataAcrossStudies}
