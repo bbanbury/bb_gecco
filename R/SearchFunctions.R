@@ -477,7 +477,7 @@ MakePriorityPrunerInputFile <- function(snplist, pvals="gigsv2", forceSelect=NUL
 #' @export
 #' @seealso \link{MakePriorityPrunerInputFile} \link{Read_PriorityPruner_Results}
 #' @examples
-#' \notrun{Run_PriorityPruner("snp_table_chr1")}
+#' \dontrun{Run_PriorityPruner("snp_table_chr1")}
 Run_PriorityPruner <- function(snp_table_file, datasource="gigsv2", r2=0.5, report.call=FALSE){
   if(length(grep("rhino", system("hostname", intern=TRUE))) < 1)
     stop("Must be on a rhino machine")
@@ -511,7 +511,7 @@ Run_PriorityPruner <- function(snp_table_file, datasource="gigsv2", r2=0.5, repo
 #' @export
 #' @seealso \link{MakePriorityPrunerInputFile} \link{Run_PriorityPruner}
 #' @examples
-#' \notrun{Read_PriorityPruner_Results(list.files(pattern="\\.results"))}
+#' \dontrun{Read_PriorityPruner_Results(list.files(pattern="\\.results"))}
 Read_PriorityPruner_Results <- function(results_files){
   res <- NULL
   for(i in results_files){

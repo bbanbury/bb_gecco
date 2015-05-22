@@ -16,7 +16,7 @@ Read in results from PriorityPruner
 This function will read in and combine all the results from a PriorityPruner analysis
 }
 \examples{
-\\notrun{Read_PriorityPruner_Results(list.files(pattern="\\\\.results"))}
+\dontrun{Read_PriorityPruner_Results(list.files(pattern="\\\\.results"))}
 }
 \seealso{
 \link{MakePriorityPrunerInputFile} \link{Run_PriorityPruner}
