@@ -18,7 +18,7 @@ This function prints a short summary of the SNP names to console, so it doesn't 
 Compact Display of SNP Names
 }
 \examples{
-load(DataLocation("hapmap_snp_names"), snp_names_113nhs_omni1.Rdata")
+load(paste0(DataLocation("hapmap_snp_names"), "snp_names_113nhs_omni1.Rdata"))
 print(snp_names)
 }
 \seealso{

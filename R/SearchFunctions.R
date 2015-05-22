@@ -137,7 +137,7 @@ ChangeStudyNames <- function(study){
 #' @return This function prints a short summary of the SNP names to console, so it doesn't freeze up the machine if the list is huge. 
 #' @seealso \link{find_rs_hapmap} \link{FindSNPposition_hapmap}
 #' @examples
-#' load(DataLocation("hapmap_snp_names"), snp_names_113nhs_omni1.Rdata")
+#' load(paste0(DataLocation("hapmap_snp_names"), "snp_names_113nhs_omni1.Rdata"))
 #' print(snp_names)
 print.snp_names <- function(x, ...){
   writeLines("SNP names data contains:", ...)
